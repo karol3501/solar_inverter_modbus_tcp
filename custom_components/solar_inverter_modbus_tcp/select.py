@@ -25,7 +25,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
         self.coordinator = coordinator
-        self._attr_unique_id = f"{DOMAIN}_ems_mode_control"
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_ems_mode_control"
         self._attr_device_info = {
             "identifiers": {(DOMAIN, "solar_inverter")},
             "name": "Solar Inverter",
