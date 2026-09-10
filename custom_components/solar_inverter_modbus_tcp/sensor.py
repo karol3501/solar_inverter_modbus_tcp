@@ -45,9 +45,10 @@ DESCRIPTION = [
     SolarSensorDescription(key="grid_voltage_b", data_key="r63", name="Grid Voltage B", device_class=SensorDeviceClass.VOLTAGE, native_unit_of_measurement="V", state_class=SensorStateClass.MEASUREMENT, scale=0.1),
     SolarSensorDescription(key="grid_voltage_c", data_key="r64", name="Grid Voltage C", device_class=SensorDeviceClass.VOLTAGE, native_unit_of_measurement="V", state_class=SensorStateClass.MEASUREMENT, scale=0.1),
     SolarSensorDescription(key="grid_frequency", data_key="r66", name="Grid Frequency", device_class=SensorDeviceClass.FREQUENCY, native_unit_of_measurement="Hz", state_class=SensorStateClass.MEASUREMENT, scale=0.01),
-    SolarSensorDescription(key="grid_active_power_a", data_key="r1078", name="Grid Active Power A", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
-    SolarSensorDescription(key="grid_active_power_b", data_key="r1080", name="Grid Active Power B", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
-    SolarSensorDescription(key="grid_active_power_c", data_key="r1082", name="Grid Active Power C", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
+    SolarSensorDescription(key="grid_active_power_a", data_key="r1078", name="Grid Active Power A", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, scale=-1),
+    SolarSensorDescription(key="grid_active_power_b", data_key="r1080", name="Grid Active Power B", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, scale=-1),
+    SolarSensorDescription(key="grid_active_power_c", data_key="r1082", name="Grid Active Power C", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, scale=-1),
+    # Registers 1084/1086/1088 are already decoded as signed I32 by the coordinator.
     SolarSensorDescription(key="grid_reactive_power_a", data_key="r1084", name="Grid Reactive Power A", native_unit_of_measurement="var", state_class=SensorStateClass.MEASUREMENT),
     SolarSensorDescription(key="grid_reactive_power_b", data_key="r1086", name="Grid Reactive Power B", native_unit_of_measurement="var", state_class=SensorStateClass.MEASUREMENT),
     SolarSensorDescription(key="grid_reactive_power_c", data_key="r1088", name="Grid Reactive Power C", native_unit_of_measurement="var", state_class=SensorStateClass.MEASUREMENT),
@@ -79,6 +80,7 @@ DESCRIPTION = [
     SolarSensorDescription(key="backup_active_power_a", data_key="r92", name="Backup Active Power A", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, signed=True),
     SolarSensorDescription(key="backup_active_power_b", data_key="r93", name="Backup Active Power B", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, signed=True),
     SolarSensorDescription(key="backup_active_power_c", data_key="r94", name="Backup Active Power C", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT, signed=True),
+    # Registers 1090/1092/1094 are already decoded as signed I32 by the coordinator.
     SolarSensorDescription(key="pv_inverter_power_a", data_key="r1090", name="PV Inverter Active Power A", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
     SolarSensorDescription(key="pv_inverter_power_b", data_key="r1092", name="PV Inverter Active Power B", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
     SolarSensorDescription(key="pv_inverter_power_c", data_key="r1094", name="PV Inverter Active Power C", device_class=SensorDeviceClass.POWER, native_unit_of_measurement="W", state_class=SensorStateClass.MEASUREMENT),
