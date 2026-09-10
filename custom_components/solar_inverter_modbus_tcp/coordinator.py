@@ -58,7 +58,6 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             if not ems:
                 raise UpdateFailed("FC03 register 4300 returned no data")
 
-            # Three contiguous FC04 blocks cover registers 26-94.
             pv = await self._read(26, 13)       # 26-38
             battery = await self._read(45, 7)   # 45-51
             ac = await self._read(58, 37)       # 58-94
@@ -92,9 +91,10 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 ],
             )
 
-            data["r1078"] = _i32(ac_meter, 0)
-            data["r1080"] = _i32(ac_meter, 2)
-            data["r1082"] = _i32(ac_meter, 4)
+            # The YAML configuration uses scale: -1 for grid active power.
+            data["r1078"] = -_i32(ac_meter, 0)
+            data["r1080"] = -_i32(ac_meter, 2)
+            data["r1082"] = -_i32(ac_meter, 4)
             data["r1084"] = _i32(ac_meter, 6)
             data["r1086"] = _i32(ac_meter, 8)
             data["r1088"] = _i32(ac_meter, 10)
