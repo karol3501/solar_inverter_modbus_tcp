@@ -3,6 +3,7 @@ from __future__ import annotations
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
@@ -16,12 +17,13 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
     async_add_entities([SolarInverterEmsSelect(coordinator)])
 
 
-class SolarInverterEmsSelect(SelectEntity):
+class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], SelectEntity):
     _attr_has_entity_name = True
     _attr_name = "EMS Mode Control"
     _attr_options = OPTIONS
 
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
+        super().__init__(coordinator)
         self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_ems_mode_control"
         self._attr_device_info = {
@@ -41,9 +43,17 @@ class SolarInverterEmsSelect(SelectEntity):
     async def async_select_option(self, option: str) -> None:
         value = NAME_TO_VALUE[option]
 
-        # Some inverter firmware accepts EMS writes only via FC16
-        # (Write Multiple Registers), even for a single register.
-        await self.coordinator.unit.write_registers(4300, [value])
+        # Some inverter firmware does not respond to FC06 for EMS register 4300.
+        # Use FC16 for the complete EMS settings block (4300-4306), preserving
+        # the current values of the other settings.
+        settings = await self.coordinator.unit.read_holding_registers(4300, 7)
+        if len(settings) != 7:
+            raise RuntimeError(
+                f"EMS settings read returned {len(settings)} registers, expected 7"
+            )
+
+        settings[0] = value
+        await self.coordinator.unit.write_registers(4300, settings)
 
         # Verify the value using FC03 before updating the entity state.
         values = await self.coordinator.unit.read_holding_registers(4300, 1)
