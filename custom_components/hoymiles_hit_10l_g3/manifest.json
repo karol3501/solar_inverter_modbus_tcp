@@ -1,0 +1,9 @@
+{
+  "domain": "hoymiles_hit_10l_g3",
+  "name": "Hoymiles HIT-10L-G3",
+  "version": "0.6.0",
+  "config_flow": true,
+  "documentation": "https://developers.home-assistant.io/docs/modbus/introduction",
+  "requirements": [],
+  "codeowners": []
+}
