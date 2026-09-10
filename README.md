@@ -1,14 +1,14 @@
-# Hoymiles HIT-10L-G3 Modbus TCP
+# Solar Inverter Modbus TCP
 
-Custom Home Assistant integration for the Hoymiles HIT-10L-G3 hybrid inverter over Modbus TCP.
+Custom Home Assistant integration for solar inverters using Modbus TCP.
 
-## Current status — 0.6.1
+## Current status — 0.6.2
 
 Minimal working integration focused on EMS Mode:
 
 - Modbus TCP connection
 - Config flow with Host, Port and Unit ID
-- Connection/device validation using FC03 register `4300`
+- Connection validation using FC03 register `4300`
 - EMS Mode sensor from holding register `4300`
 - EMS Mode control via FC06 write to register `4300`
 - Immediate read-back verification after writes
@@ -27,18 +27,18 @@ Minimal working integration focused on EMS Mode:
 | 6 | Peak-shaving Mode |
 | 7 | TOU Mode |
 
-Register `4300` is documented by Hoymiles as EMS Mode (RW U16).
+Register `4300` is an EMS Mode register used by the supported inverter protocol.
 
 ## Roadmap
 
-The next stages will add grouped telemetry for PV, grid, battery, load, energy and BMS, based on the official Hoymiles Modbus documentation and the verified Home Assistant YAML configuration.
+The next stages will add grouped telemetry for PV, grid, battery, load, energy and BMS.
 
 ## Installation
 
 The integration is intended for HACS and manual installation into:
 
-`/config/custom_components/hoymiles_hit_10l_g3/`
+`/config/custom_components/solar_inverter_modbus_tcp/`
 
-## Credits / references
+## Protocol
 
-Protocol implementation is based on the official Hoymiles Energy Storage Modbus documentation and verified against a working HIT-10L-G3 Modbus TCP installation.
+The integration uses Modbus TCP and is designed around a generic solar-inverter register model. Device-specific register definitions will be added as supported models are validated.
