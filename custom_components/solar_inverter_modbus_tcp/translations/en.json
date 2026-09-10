@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect solar inverter",
+        "description": "Enter the Modbus TCP connection details.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus Unit ID"
+        },
+        "data_description": {
+          "host": "IP address or hostname of the inverter.",
+          "port": "Modbus TCP port, normally 502.",
+          "unit_id": "Modbus Unit ID, normally 1."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the inverter or read holding register 4300.",
+      "invalid_unit_id": "Unit ID must be between 1 and 247."
+    },
+    "abort": {
+      "already_configured": "This inverter is already configured."
+    }
+  }
+}
