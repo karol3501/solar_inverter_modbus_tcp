@@ -12,107 +12,93 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-def _i32(values: list[int], index: int) -> int:
-    """Decode two consecutive Modbus registers as signed big-endian I32."""
-    raw = (int(values[index]) << 16) | int(values[index + 1])
+def _i16(value: int) -> int:
+    value = int(value)
+    return value - 0x10000 if value & 0x8000 else value
+
+
+def _i32(hi: int, lo: int) -> int:
+    raw = (int(hi) << 16) | int(lo)
     return raw - 0x100000000 if raw & 0x80000000 else raw
 
 
-def _put_block(data: dict[str, object], values: list[int], start: int, addresses: list[int]) -> None:
-    """Copy raw U16/I16 register values from a contiguous Modbus block."""
-    for address in addresses:
-        data[f"r{address}"] = int(values[address - start])
+def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
+    for offset, value in enumerate(values):
+        data[f"r{start + offset}"] = int(value)
 
 
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
-    """Poll inverter telemetry using efficient contiguous Modbus blocks."""
+    """Poll all telemetry used by the original Modbus YAML configuration."""
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        unit: ModbusUnit,
-        entry_id: str,
-        update_interval: int = 10,
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, unit: ModbusUnit, entry_id: str, update_interval: int = 10) -> None:
         self.unit = unit
         self.entry_id = entry_id
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(seconds=update_interval),
-        )
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
 
-    async def _read(self, address: int, count: int) -> list[int]:
+    async def _read_input(self, address: int, count: int) -> list[int]:
         values = await self.unit.read_input_registers(address, count)
         if len(values) != count:
-            raise UpdateFailed(
-                f"FC04 read {address}-{address + count - 1} returned "
-                f"{len(values)} registers, expected {count}"
-            )
+            raise UpdateFailed(f"FC04 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}")
+        return [int(value) for value in values]
+
+    async def _read_holding(self, address: int, count: int) -> list[int]:
+        values = await self.unit.read_holding_registers(address, count)
+        if len(values) != count:
+            raise UpdateFailed(f"FC03 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}")
         return [int(value) for value in values]
 
     async def _async_update_data(self) -> dict[str, object]:
         try:
-            ems = await self.unit.read_holding_registers(4300, 1)
-            if not ems:
-                raise UpdateFailed("FC03 register 4300 returned no data")
+            # Keep reads contiguous where practical while preserving the register
+            # layout from the original YAML configuration.
+            input_blocks = [
+                (0, 39),
+                (45, 32),
+                (113, 3),
+                (201, 1),
+                (210, 1),
+                (241, 3),
+                (1022, 4),
+                (1046, 1),
+                (1060, 1),
+                (1078, 18),
+                (2000, 69),
+                (2100, 36),
+            ]
+            data: dict[str, object] = {}
+            for address, count in input_blocks:
+                _put_block(data, await self._read_input(address, count), address)
 
-            pv = await self._read(26, 13)       # 26-38
-            battery = await self._read(45, 7)   # 45-51
-            ac = await self._read(58, 37)       # 58-94
+            for address, count in ((259, 1), (4300, 8), (4446, 2)):
+                _put_block(data, await self._read_holding(address, count), address)
 
-            # Sparse I32 meter values are defined at 1078, 1080, ..., 1094.
-            # Read through 1095 so the final I32 has both words available.
-            ac_meter = await self._read(1078, 18)  # 1078-1095
+            # 32-bit values.
+            data["sw_fault"] = _i32(data["r19"], data["r20"])
+            data["r48"] = _i32(data["r48"], data["r49"])
+            data["r50"] = _i32(data["r50"], data["r51"])
 
-            data: dict[str, object] = {"ems_mode": int(ems[0])}
+            for address in (1078, 1080, 1082, 1084, 1086, 1088, 1090, 1092, 1094):
+                data[f"r{address}"] = _i32(data[f"r{address}"], data[f"r{address + 1}"])
 
-            _put_block(
-                data,
-                pv,
-                26,
-                [26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
-            )
-            _put_block(data, battery, 45, [45, 46, 48, 50])
-            _put_block(
-                data,
-                ac,
-                58,
-                [
-                    58, 59, 60,
-                    62, 63, 64, 66,
-                    67, 68, 69, 70, 71, 72,
-                    73, 74, 75, 76,
-                    77, 78, 79, 80,
-                    81, 82, 83, 84, 85, 86,
-                    87, 88, 89, 90,
-                    91, 92, 93, 94,
-                ],
-            )
+            for address in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068):
+                data[f"r{address}"] = _i32(data[f"r{address}"], data[f"r{address + 1}"])
 
-            # Keep raw I32 values here. Sensor descriptions apply the YAML
-            # scale, including scale: -1 for grid active power.
-            data["r1078"] = _i32(ac_meter, 0)
-            data["r1080"] = _i32(ac_meter, 2)
-            data["r1082"] = _i32(ac_meter, 4)
-            data["r1084"] = _i32(ac_meter, 6)
-            data["r1086"] = _i32(ac_meter, 8)
-            data["r1088"] = _i32(ac_meter, 10)
-            data["r1090"] = _i32(ac_meter, 12)
-            data["r1092"] = _i32(ac_meter, 14)
-            data["r1094"] = _i32(ac_meter, 16)
+            data["work_status_text"] = {
+                0: "PowerInit", 1: "StdbyMode", 2: "GridOnTest", 3: "PowerInit",
+                4: "FaultMode", 5: "GridOffMode", 6: "ByPassMode", 7: "PVChargeBat",
+                8: "GenMode", 9: "IPSMode",
+            }.get(int(data["r0"]), "Unknown")
+            data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
+            data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
+            data["total_inverter_power"] = sum(_i16(int(data[f"r{x}"])) for x in (74, 75, 76))
+            data["load_power"] = abs(abs(int(data["total_inverter_power"])) - abs(int(data["total_grid_power"])))
+            data["ems_mode"] = int(data["r4300"])
+            data["peak_meter_baseline_soc"] = int(data["r4446"]) // 256
+            data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
 
-            # Battery current and power are I32 on G3-compatible models.
-            data["battery_current"] = _i32(battery, 3)
-            data["battery_power"] = _i32(battery, 5)
-
-            _LOGGER.debug("Modbus telemetry update: %s", data)
             return data
         except UpdateFailed:
             raise
         except Exception as err:
             _LOGGER.exception("Modbus telemetry read failed: %s", err)
-            raise UpdateFailed(
-                f"Modbus telemetry read failed: {type(err).__name__}: {err}"
-            ) from err
+            raise UpdateFailed(f"Modbus telemetry read failed: {type(err).__name__}: {err}") from err
