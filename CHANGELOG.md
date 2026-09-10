@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.1
+
+### Fixed
+- Added the missing Grid Frequency entity from the original YAML configuration (register 66, scale 0.01 Hz).
+- Preserved the existing inverter, backup, grid reactive-power, and PV-inverter meter entities while completing the YAML migration.
+
 ## 0.8.0
 
 ### Added
