@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.5
+
+### Added
+- Added HACS installation badges and a direct **My Home Assistant** repository button to the README.
+- Added a short HACS installation and configuration guide to the README.
+- Added automated HACS validation through GitHub Actions.
+
 ## 0.7.4
 
 ### Fixed
