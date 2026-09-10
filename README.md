@@ -2,7 +2,7 @@
 
 Custom Home Assistant integration for solar inverters using Modbus TCP.
 
-## Current status — 0.6.3
+## Current status — 0.6.4
 
 Minimal working integration focused on EMS Mode:
 
@@ -10,8 +10,8 @@ Minimal working integration focused on EMS Mode:
 - Config flow with Host, Port and Unit ID
 - Connection validation using FC03 register `4300`
 - EMS Mode sensor from holding register `4300`
-- EMS Mode control via FC06 write to register `4300`
-- Immediate read-back verification after writes
+- EMS Mode control via FC16 write to register `4300`
+- Immediate FC03 read-back verification after writes
 - Uses Home Assistant's modern `async_get_unit` / `async_get_temporary_unit` Modbus API
 - Custom green/blue circular integration logo
 
