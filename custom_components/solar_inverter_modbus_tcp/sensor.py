@@ -137,7 +137,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
         if total_raw is None:
             return None
         total = int(total_raw) * 0.1
-        today = dt_util.now(self.hass).date().isoformat()
+        today = dt_util.now().date().isoformat()
         if self._baseline is None or self._reset_date != today:
             self._baseline = total
             self._reset_date = today
