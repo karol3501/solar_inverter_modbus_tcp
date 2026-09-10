@@ -38,11 +38,18 @@ DESCRIPTION = [
     d("Grid Voltage L1", "r62", 0.1, "V", "voltage", "measurement"), d("Grid Voltage L2", "r63", 0.1, "V", "voltage", "measurement"), d("Grid Voltage L3", "r64", 0.1, "V", "voltage", "measurement"),
     d("Inverter Voltage L1", "r67", 0.1, "V", "voltage", "measurement"), d("Inverter Voltage L2", "r68", 0.1, "V", "voltage", "measurement"), d("Inverter Voltage L3", "r69", 0.1, "V", "voltage", "measurement"),
     d("Inverter Current L1", "r70", 0.01, "A", "current", "measurement", "int16"), d("Inverter Current L2", "r71", 0.01, "A", "current", "measurement", "int16"), d("Inverter Current L3", "r72", 0.01, "A", "current", "measurement", "int16"),
-    d("Inverter Active Power L1", "r74", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L2", "r75", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L3", "r76", 1, "W", "power", "measurement", "int16"),
+    d("Inverter Active Power", "r73", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L1", "r74", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L2", "r75", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L3", "r76", 1, "W", "power", "measurement", "int16"),
+    d("Inverter Reactive Power", "r77", 1, "var", None, "measurement", "int16"), d("Inverter Reactive Power L1", "r78", 1, "var", None, "measurement", "int16"), d("Inverter Reactive Power L2", "r79", 1, "var", None, "measurement", "int16"), d("Inverter Reactive Power L3", "r80", 1, "var", None, "measurement", "int16"),
+    d("Backup Voltage A", "r81", 0.1, "V", "voltage", "measurement"), d("Backup Voltage B", "r82", 0.1, "V", "voltage", "measurement"), d("Backup Voltage C", "r83", 0.1, "V", "voltage", "measurement"),
+    d("Backup Current A", "r84", 0.01, "A", "current", "measurement", "int16"), d("Backup Current B", "r85", 0.01, "A", "current", "measurement", "int16"), d("Backup Current C", "r86", 0.01, "A", "current", "measurement", "int16"),
+    d("Backup Apparent Power", "r87", 1, "VA", None, "measurement", "int16"), d("Backup Apparent Power A", "r88", 1, "VA", None, "measurement", "int16"), d("Backup Apparent Power B", "r89", 1, "VA", None, "measurement", "int16"), d("Backup Apparent Power C", "r90", 1, "VA", None, "measurement", "int16"),
+    d("Backup Active Power", "r91", 1, "W", "power", "measurement", "int16"), d("Backup Active Power A", "r92", 1, "W", "power", "measurement", "int16"), d("Backup Active Power B", "r93", 1, "W", "power", "measurement", "int16"), d("Backup Active Power C", "r94", 1, "W", "power", "measurement", "int16"),
     d("Inverter Temperature", "r113", 1, "°C", "temperature", "measurement", "int16"), d("Battery Temperature", "r114", 1, "°C", "temperature", "measurement", "int16"), d("Ambient Temperature", "r115", 1, "°C", "temperature", "measurement", "int16"),
     d("BMS Link Status", "r1022", 1, None, None, "measurement"), d("BMS Fault Code", "r1023", 1, None, None, "measurement"), d("Battery SOC", "r1025", 1, "%", "battery", "measurement"),
     d("Grid Side Meter Link Status", "r1046", 1, None, None, "measurement"), d("DRM Status", "r1060", 1, None, None, "measurement"),
     d("Grid Active Power L1", "r1078", -1, "W", "power", "measurement", "int32"), d("Grid Active Power L2", "r1080", -1, "W", "power", "measurement", "int32"), d("Grid Active Power L3", "r1082", -1, "W", "power", "measurement", "int32"),
+    d("Grid Reactive Power L1", "r1084", 1, "var", None, "measurement", "int32"), d("Grid Reactive Power L2", "r1086", 1, "var", None, "measurement", "int32"), d("Grid Reactive Power L3", "r1088", 1, "var", None, "measurement", "int32"),
+    d("PV Inverter Active Power A", "r1090", 1, "W", "power", "measurement", "int32"), d("PV Inverter Active Power B", "r1092", 1, "W", "power", "measurement", "int32"), d("PV Inverter Active Power C", "r1094", 1, "W", "power", "measurement", "int32"),
     d("Safety DSP FM Version", "r201"), d("ReConnect Counter", "r210", 1, "s", None, "measurement"), d("PF Voltage", "r241", 0.1, "V", "voltage", "measurement", "int16"), d("Iso Resistor", "r242", 1, "kΩ", None, "measurement"), d("Residual Current", "r243", 1, "mA", None, "measurement", "int16"),
     d("PV Total Energy", "r2000", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Battery Energy Total", "r2022", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Load Energy Total", "r2024", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Grid Energy Total", "r2026", 0.1, "kWh", "energy", "total_increasing", "int32"),
     d("Battery Total Charge Energy", "r2028", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Battery Total Discharge Energy", "r2030", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Import Total", "r2040", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Export Total", "r2048", 0.1, "kWh", "energy", "total_increasing", "int32"),
@@ -52,13 +59,7 @@ DESCRIPTION = [
     d("EMS Mode Raw", "r4300", 1, None, None, "measurement"), d("Peak Meter Power", "r4447", 1, "W", "power", "measurement"), d("Peak Meter SOC Raw", "r4446"),
 ]
 
-DERIVED = [
-    ("work_status_text", "Work Status Text", None, None, None),
-    ("total_pv_power", "Total PV Power", "W", "power", "measurement"),
-    ("total_grid_power", "Total Grid Power", "W", "power", "measurement"),
-    ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement"),
-    ("load_power", "Load Power", "W", "power", "measurement"),
-]
+DERIVED = [("work_status_text", "Work Status Text", None, None, None), ("total_pv_power", "Total PV Power", "W", "power", "measurement"), ("total_grid_power", "Total Grid Power", "W", "power", "measurement"), ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement"), ("load_power", "Load Power", "W", "power", "measurement")]
 
 
 def _device_info(coordinator: SolarInverterCoordinator) -> DeviceInfo:
