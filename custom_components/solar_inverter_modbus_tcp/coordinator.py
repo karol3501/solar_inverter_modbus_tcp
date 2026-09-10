@@ -54,16 +54,16 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _async_update_data(self) -> dict[str, object]:
         try:
-            # FC03: EMS mode remains on holding register 4300.
             ems = await self.unit.read_holding_registers(4300, 1)
             if not ems:
                 raise UpdateFailed("FC03 register 4300 returned no data")
 
-            # FC04 blocks: three reads cover the basic real-time telemetry.
+            # Three contiguous FC04 blocks cover registers 26-94.
             pv = await self._read(26, 13)       # 26-38
             battery = await self._read(45, 7)   # 45-51
             ac = await self._read(58, 37)       # 58-94
-            ac_meter = await self._read(1078, 19)  # 1078-1096
+            # Meter values are sparse I32 pairs: 1078-1094.
+            ac_meter = await self._read(1078, 17)  # 1078-1094
 
             data: dict[str, object] = {"ems_mode": int(ems[0])}
 
@@ -90,7 +90,6 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 ],
             )
 
-            # 32-bit grid/meter values. Registers are high-word first.
             data["r1078"] = _i32(ac_meter, 0)
             data["r1080"] = _i32(ac_meter, 2)
             data["r1082"] = _i32(ac_meter, 4)
