@@ -9,7 +9,7 @@ from modbus_connection import ModbusTcpParams
 from .const import CONF_SCAN_INTERVAL, CONF_UNIT_ID
 from .coordinator import SolarInverterCoordinator
 
-PLATFORMS = ["sensor", "select"]
+PLATFORMS = ["sensor", "select", "number"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
