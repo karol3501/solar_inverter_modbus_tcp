@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.2
+
+### Fixed
+- Fixed the FC04 energy telemetry read range: register 2068 is an I32 value and requires register 2069 for its low word.
+- Prevented `KeyError: 'r2069'` during coordinator updates.
+
 ## 0.8.1
 
 ### Fixed
