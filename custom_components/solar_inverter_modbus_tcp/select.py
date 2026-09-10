@@ -55,11 +55,12 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
         settings[0] = value
         await self.coordinator.unit.write_registers(4300, settings)
 
-        # Verify the value using FC03 before updating the entity state.
         values = await self.coordinator.unit.read_holding_registers(4300, 1)
         if not values or int(values[0]) != value:
             raise RuntimeError(
                 f"EMS mode write verification failed: expected {value}, got {values!r}"
             )
 
-        self.coordinator.async_set_updated_data({"ems_mode": int(values[0])})
+        updated = dict(self.coordinator.data)
+        updated["ems_mode"] = int(values[0])
+        self.coordinator.async_set_updated_data(updated)
