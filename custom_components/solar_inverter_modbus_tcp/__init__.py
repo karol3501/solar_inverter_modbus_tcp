@@ -16,7 +16,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     params = ModbusTcpParams(host=entry.data[CONF_HOST], port=entry.data[CONF_PORT])
     unit = async_get_unit(hass, entry, params, entry.data[CONF_UNIT_ID])
     coordinator = SolarInverterCoordinator(
-        hass, unit, update_interval=entry.options.get(CONF_SCAN_INTERVAL, 10)
+        hass,
+        unit,
+        entry.entry_id,
+        update_interval=entry.options.get(CONF_SCAN_INTERVAL, 10),
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
