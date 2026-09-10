@@ -62,8 +62,10 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             pv = await self._read(26, 13)       # 26-38
             battery = await self._read(45, 7)   # 45-51
             ac = await self._read(58, 37)       # 58-94
-            # Meter values are sparse I32 pairs: 1078-1094.
-            ac_meter = await self._read(1078, 17)  # 1078-1094
+
+            # The meter I32 registers are sparse and end at 1095 because
+            # register 1094 is the high word of the final I32 value.
+            ac_meter = await self._read(1078, 18)  # 1078-1095
 
             data: dict[str, object] = {"ems_mode": int(ems[0])}
 
