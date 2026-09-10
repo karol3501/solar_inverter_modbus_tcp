@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0
+
+### Added
+- Added all active Modbus telemetry from the original YAML configuration to the custom integration.
+- Added derived sensors previously implemented as YAML template sensors: Work Status Text, Total PV Power, Total Grid Power, Total Inverter Power, and Load Power.
+- Added persistent daily Load Energy Today based on Load Energy Use Total.
+- Added Peak Shaving Baseline SOC and Peak Shaving Reserved SOC number controls for register 4446.
+- Added the original PV, battery, grid, inverter, backup, BMS, diagnostic, energy-total, and daily-energy entities to the single Solar Inverter device.
+- Preserved existing signed I16/I32 decoding and grid active-power direction handling.
+
 ## 0.7.5
 
 ### Added
