@@ -19,13 +19,13 @@ def _i32(values: list[int], index: int) -> int:
 
 
 def _put_block(data: dict[str, object], values: list[int], start: int, addresses: list[int]) -> None:
-    """Copy selected U16/I16 values from a contiguous Modbus block."""
+    """Copy raw U16/I16 register values from a contiguous Modbus block."""
     for address in addresses:
         data[f"r{address}"] = int(values[address - start])
 
 
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
-    """Poll basic inverter telemetry using efficient contiguous Modbus blocks."""
+    """Poll inverter telemetry using efficient contiguous Modbus blocks."""
 
     def __init__(
         self,
@@ -62,8 +62,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             battery = await self._read(45, 7)   # 45-51
             ac = await self._read(58, 37)       # 58-94
 
-            # The meter I32 registers are sparse and end at 1095 because
-            # register 1094 is the high word of the final I32 value.
+            # Sparse I32 meter values are defined at 1078, 1080, ..., 1094.
+            # Read through 1095 so the final I32 has both words available.
             ac_meter = await self._read(1078, 18)  # 1078-1095
 
             data: dict[str, object] = {"ems_mode": int(ems[0])}
@@ -91,10 +91,11 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 ],
             )
 
-            # The YAML configuration uses scale: -1 for grid active power.
-            data["r1078"] = -_i32(ac_meter, 0)
-            data["r1080"] = -_i32(ac_meter, 2)
-            data["r1082"] = -_i32(ac_meter, 4)
+            # Keep raw I32 values here. Sensor descriptions apply the YAML
+            # scale, including scale: -1 for grid active power.
+            data["r1078"] = _i32(ac_meter, 0)
+            data["r1080"] = _i32(ac_meter, 2)
+            data["r1082"] = _i32(ac_meter, 4)
             data["r1084"] = _i32(ac_meter, 6)
             data["r1086"] = _i32(ac_meter, 8)
             data["r1088"] = _i32(ac_meter, 10)
