@@ -15,8 +15,15 @@ _LOGGER = logging.getLogger(__name__)
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     """Minimal diagnostic: FC03 holding register 4300."""
 
-    def __init__(self, hass: HomeAssistant, unit: ModbusUnit, update_interval: int = 10) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        unit: ModbusUnit,
+        entry_id: str,
+        update_interval: int = 10,
+    ) -> None:
         self.unit = unit
+        self.entry_id = entry_id
         super().__init__(
             hass,
             _LOGGER,
