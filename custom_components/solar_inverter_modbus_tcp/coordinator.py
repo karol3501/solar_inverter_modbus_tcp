@@ -49,21 +49,9 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _async_update_data(self) -> dict[str, object]:
         try:
-            # Keep reads contiguous where practical while preserving the register
-            # layout from the original YAML configuration.
             input_blocks = [
-                (0, 39),
-                (45, 32),
-                (113, 3),
-                (201, 1),
-                (210, 1),
-                (241, 3),
-                (1022, 4),
-                (1046, 1),
-                (1060, 1),
-                (1078, 18),
-                (2000, 69),
-                (2100, 36),
+                (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
+                (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 69), (2100, 36),
             ]
             data: dict[str, object] = {}
             for address, count in input_blocks:
@@ -95,7 +83,6 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             data["ems_mode"] = int(data["r4300"])
             data["peak_meter_baseline_soc"] = int(data["r4446"]) // 256
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
-
             return data
         except UpdateFailed:
             raise
