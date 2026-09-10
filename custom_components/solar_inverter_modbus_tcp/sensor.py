@@ -20,7 +20,7 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
     def __init__(self, coordinator: SolarInverterCoordinator, description: SensorEntityDescription) -> None:
         super().__init__(coordinator)
         self.entity_description = description
-        self._attr_unique_id = f"{DOMAIN}_{description.key}"
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{description.key}"
         self._attr_has_entity_name = True
         self._attr_device_info = {
             "identifiers": {(DOMAIN, "solar_inverter")},
@@ -30,7 +30,7 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
         }
 
     @property
-    def native_value(self):
+    def native_value(self) -> str | None:
         value = self.coordinator.data.get("ems_mode")
         if value is None:
             return None
