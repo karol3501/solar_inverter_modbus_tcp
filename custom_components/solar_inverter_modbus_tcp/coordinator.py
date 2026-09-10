@@ -51,7 +51,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         try:
             input_blocks = [
                 (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
-                (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 69), (2100, 36),
+                (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 70), (2100, 36),
             ]
             data: dict[str, object] = {}
             for address, count in input_blocks:
