@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.4
+
+### Fixed
+- Fixed signed I32 telemetry handling: grid reactive power and PV inverter active power are no longer incorrectly re-decoded as signed 16-bit values.
+- Applied the YAML `scale: -1` direction to grid active power registers 1078, 1080, and 1082 at the sensor layer, while keeping coordinator I32 values raw and signed.
+- Preserved signed I16 decoding for PV currents, inverter currents/powers/reactive powers, and backup currents/powers/reactive powers.
+
 ## 0.7.3
 
 ### Fixed
