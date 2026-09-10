@@ -40,10 +40,16 @@ class SolarInverterEmsSelect(SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         value = NAME_TO_VALUE[option]
-        await self.coordinator.unit.write_register(4300, value)
+
+        # Some inverter firmware accepts EMS writes only via FC16
+        # (Write Multiple Registers), even for a single register.
+        await self.coordinator.unit.write_registers(4300, [value])
+
+        # Verify the value using FC03 before updating the entity state.
         values = await self.coordinator.unit.read_holding_registers(4300, 1)
         if not values or int(values[0]) != value:
             raise RuntimeError(
                 f"EMS mode write verification failed: expected {value}, got {values!r}"
             )
+
         self.coordinator.async_set_updated_data({"ems_mode": int(values[0])})
