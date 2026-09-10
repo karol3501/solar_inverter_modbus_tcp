@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3
+
+### Fixed
+- Fixed `Load Energy Today` timezone handling for Home Assistant 2026.9+ by calling `dt_util.now()` without passing `HomeAssistant` as the timezone argument.
+- Prevented `TypeError: tzinfo argument must be None or of a tzinfo subclass, not type 'HomeAssistant'` during coordinator listener updates.
+
 ## 0.8.2
 
 ### Fixed
