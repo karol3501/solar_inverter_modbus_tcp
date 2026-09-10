@@ -1,0 +1,90 @@
+name: Automatic Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read integration version
+        id: version
+        run: |
+          VERSION=$(python - <<'PY'
+          import json
+
+          with open("custom_components/solar_inverter_modbus_tcp/manifest.json") as f:
+              data = json.load(f)
+
+          print(data["version"])
+          PY
+          )
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if release already exists
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.check.outputs.exists == 'false'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Extract changelog
+        if: steps.check.outputs.exists == 'false'
+        id: changelog
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python - <<'PY' > release_notes.md
+          import re
+
+          version = "${{ steps.version.outputs.version }}"
+
+          with open("CHANGELOG.md", encoding="utf-8") as f:
+              text = f.read()
+
+          pattern = rf"(?ms)^## \[?{re.escape(version)}\]?.*?(?=^## |\Z)"
+          match = re.search(pattern, text)
+
+          if match:
+              print(match.group(0).strip())
+          else:
+              print(f"## {version}")
+              print("")
+              print("See commit history for changes.")
+          PY
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes-file release_notes.md \
+            --target main
