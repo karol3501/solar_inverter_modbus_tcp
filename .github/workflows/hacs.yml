@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: HACS validation
-        uses: hacs/action@main
+        uses: hacs/action@885037da508419fd08c13515967aec868dfdee2d # main
         with:
           category: integration
