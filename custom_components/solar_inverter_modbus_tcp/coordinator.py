@@ -111,7 +111,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 raise
             self._last_data = data.copy()
             self._debug(
-                "MODBUS UPDATE SUCCESS | requests=15 | successful=%s | failed=%s | duration=%.3fs",
+                "MODBUS UPDATE SUCCESS | successful=%s | failed=%s | duration=%.3fs",
                 self._successful_requests,
                 self._failed_requests,
                 time.monotonic() - started,
@@ -120,8 +120,19 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _async_update_data_locked(self) -> dict[str, object]:
         input_blocks = [
-            (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
-            (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 70), (2100, 36),
+            (0, 39),
+            (45, 6),
+            (62, 15),
+            (81, 3),
+            (91, 4),
+            (113, 3),
+            (201, 1),
+            (1022, 4),
+            (1046, 4),
+            (1060, 1),
+            (1078, 18),
+            (2000, 71),
+            (2100, 36),
         ]
         holding_blocks = [(259, 1), (4300, 8), (4446, 2)]
         total_requests = len(input_blocks) + len(holding_blocks)
@@ -156,20 +167,19 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
         for key, high_key, low_key in (
             ("sw_fault", "r19", "r20"),
-            ("r48", "r48", "r49"),
-            ("r50", "r50", "r51"),
-            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088, 1090, 1092, 1094)),
-            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (48, 50)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070)),
         ):
             if high_key in data and low_key in data:
                 data[key] = _i32(data[high_key], data[low_key])
 
         if "r0" in data:
             data["work_status_text"] = {
-                0: "PowerInit", 1: "StdbyMode", 2: "GridOnTest", 3: "PowerInit",
-                4: "FaultMode", 5: "GridOffMode", 6: "ByPassMode", 7: "PVChargeBat",
-                8: "GenMode", 9: "IPSMode",
-            }.get(int(data["r0"]), "Unknown")
+                0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising",
+                4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery",
+                8: "Generator Mode", 9: "Island Mode",
+            }.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
         if all(f"r{x}" in data for x in (1078, 1080, 1082)):
