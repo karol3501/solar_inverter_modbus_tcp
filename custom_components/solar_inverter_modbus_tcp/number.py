@@ -63,9 +63,6 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
 
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
-
-            # Use the latest coordinator value so both controls operate on the
-            # same packed register without an unnecessary FC03 request.
             current_value = self.coordinator.data.get("r4446")
             if current_value is None:
                 current = await self.coordinator.unit.read_holding_registers(4446, 1)
@@ -79,8 +76,6 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             else:
                 raw = (current_raw & 0xFF00) | requested
 
-            # Optimistic update: reflect the user's change immediately.
-            # The next coordinator poll confirms the actual inverter value.
             updated = dict(self.coordinator.data)
             updated["r4446"] = raw
             updated["peak_meter_baseline_soc"] = raw // 256
@@ -93,7 +88,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
 
             try:
                 await self.coordinator.unit.write_register(4446, raw)
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:
                 _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
                 raise
 
