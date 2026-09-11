@@ -47,6 +47,9 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self.entry_id = entry_id
         self.debug_logging = debug_logging
         self.modbus_lock = asyncio.Lock()
+        self._last_data: dict[str, object] = {}
+        self._successful_requests = 0
+        self._failed_requests = 0
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
 
     def _debug(self, message: str, *args: object) -> None:
@@ -106,47 +109,79 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             except Exception:
                 _LOGGER.exception("MODBUS UPDATE FAILED | entry_id=%s", self.entry_id)
                 raise
-            self._debug("MODBUS UPDATE SUCCESS | requests=16 | duration=%.3fs", time.monotonic() - started)
+            self._last_data = data.copy()
+            self._debug(
+                "MODBUS UPDATE SUCCESS | requests=15 | successful=%s | failed=%s | duration=%.3fs",
+                self._successful_requests,
+                self._failed_requests,
+                time.monotonic() - started,
+            )
             return data
 
     async def _async_update_data_locked(self) -> dict[str, object]:
-        try:
-            input_blocks = [
-                (0, 39), (45, 36), (81, 14), (113, 3), (201, 1), (210, 1), (241, 3),
-                (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 70), (2100, 36),
-            ]
-            data: dict[str, object] = {}
-            for address, count in input_blocks:
-                _put_block(data, await self._read_input(address, count), address)
+        input_blocks = [
+            (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
+            (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 70), (2100, 36),
+        ]
+        holding_blocks = [(259, 1), (4300, 8), (4446, 2)]
+        total_requests = len(input_blocks) + len(holding_blocks)
+        data: dict[str, object] = self._last_data.copy()
+        self._successful_requests = 0
+        self._failed_requests = 0
 
-            for address, count in ((259, 1), (4300, 8), (4446, 2)):
-                _put_block(data, await self._read_holding(address, count), address)
+        for function, blocks in (("FC04", input_blocks), ("FC03", holding_blocks)):
+            for address, count in blocks:
+                try:
+                    if function == "FC04":
+                        values = await self._read_input(address, count)
+                    else:
+                        values = await self._read_holding(address, count)
+                    _put_block(data, values, address)
+                    self._successful_requests += 1
+                except Exception as err:  # noqa: BLE001
+                    self._failed_requests += 1
+                    _LOGGER.warning(
+                        "MODBUS BLOCK SKIPPED | %s | address=%s | range=%s-%s | using last good data | error=%s",
+                        function,
+                        address,
+                        address,
+                        address + count - 1,
+                        err,
+                    )
 
-            data["sw_fault"] = _i32(data["r19"], data["r20"])
-            data["r48"] = _i32(data["r48"], data["r49"])
-            data["r50"] = _i32(data["r50"], data["r51"])
+        if self._successful_requests == 0:
+            raise UpdateFailed(
+                f"Modbus telemetry update failed: all {total_requests} requests failed"
+            )
 
-            for address in (1078, 1080, 1082, 1084, 1086, 1088, 1090, 1092, 1094):
-                data[f"r{address}"] = _i32(data[f"r{address}"], data[f"r{address + 1}"])
+        for key, high_key, low_key in (
+            ("sw_fault", "r19", "r20"),
+            ("r48", "r48", "r49"),
+            ("r50", "r50", "r51"),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088, 1090, 1092, 1094)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068)),
+        ):
+            if high_key in data and low_key in data:
+                data[key] = _i32(data[high_key], data[low_key])
 
-            for address in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068):
-                data[f"r{address}"] = _i32(data[f"r{address}"], data[f"r{address + 1}"])
-
+        if "r0" in data:
             data["work_status_text"] = {
                 0: "PowerInit", 1: "StdbyMode", 2: "GridOnTest", 3: "PowerInit",
                 4: "FaultMode", 5: "GridOffMode", 6: "ByPassMode", 7: "PVChargeBat",
                 8: "GenMode", 9: "IPSMode",
             }.get(int(data["r0"]), "Unknown")
+        if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
+        if all(f"r{x}" in data for x in (1078, 1080, 1082)):
             data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
+        if all(f"r{x}" in data for x in (74, 75, 76)):
             data["total_inverter_power"] = sum(_i16(int(data[f"r{x}"])) for x in (74, 75, 76))
+        if "total_inverter_power" in data and "total_grid_power" in data:
             data["load_power"] = abs(abs(int(data["total_inverter_power"])) - abs(int(data["total_grid_power"])))
+        if "r4300" in data:
             data["ems_mode"] = int(data["r4300"])
+        if "r4446" in data:
             data["peak_meter_baseline_soc"] = int(data["r4446"]) // 256
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
-            return data
-        except UpdateFailed:
-            raise
-        except Exception as err:
-            _LOGGER.exception("Modbus telemetry read failed")
-            raise UpdateFailed(f"Modbus telemetry read failed: {type(err).__name__}: {err}") from err
+
+        return data
