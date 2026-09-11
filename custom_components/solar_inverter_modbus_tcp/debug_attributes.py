@@ -25,21 +25,54 @@ def _attrs(function: str, address: int, registers: str, source: str | None = Non
     return result
 
 
+STATUS_ENTITIES = {
+    "r1022": ("BMS Link Status", {0: "Disconnected", 1: "Connected"}),
+    "r1023": ("BMS Fault Status", {0: "No Fault"}),
+    "r1046": ("Grid Meter Link Status", {0: "Disconnected", 1: "Connected"}),
+    "r1060": ("DRM Status", {0: "Inactive", 1: "Active"}),
+}
+
+
 def patch_sensor_entities(sensor_module) -> None:
     if getattr(sensor_module.SolarInverterSensor, "_solar_modbus_debug_patched", False):
         return
 
+    # Remove raw duplicate/status-register entities that are now represented by
+    # decoded status entities or the dedicated control entity.
+    sensor_module.DESCRIPTION[:] = [
+        description
+        for description in sensor_module.DESCRIPTION
+        if description.data_key not in {"r0", "r4300", "r4446"}
+    ]
+
     original_sensor_attrs = getattr(sensor_module.SolarInverterSensor, "extra_state_attributes", None)
+    original_native_value = sensor_module.SolarInverterSensor.native_value
+
+    @property
+    def sensor_value(self):
+        data_key = self.entity_description.data_key
+        raw = self.coordinator.data.get(data_key)
+        if data_key in STATUS_ENTITIES and raw is not None:
+            _, status_map = STATUS_ENTITIES[data_key]
+            raw_value = int(raw)
+            if data_key == "r1023":
+                return "No Fault" if raw_value == 0 else "Fault"
+            return status_map.get(raw_value, f"Unknown ({raw_value})")
+        return original_native_value.fget(self)
 
     @property
     def sensor_attrs(self):
         base = original_sensor_attrs.__get__(self) if original_sensor_attrs else {}
-        info = _raw_register_info(self.entity_description.data_key)
         result = dict(base or {})
+        info = _raw_register_info(self.entity_description.data_key)
         if info:
             result.update(_attrs(*info))
+        raw = self.coordinator.data.get(self.entity_description.data_key)
+        if self.entity_description.data_key in STATUS_ENTITIES and raw is not None:
+            result["raw_value"] = int(raw)
         return result
 
+    sensor_module.SolarInverterSensor.native_value = sensor_value
     sensor_module.SolarInverterSensor.extra_state_attributes = sensor_attrs
     sensor_module.SolarInverterSensor._solar_modbus_debug_patched = True
 
@@ -84,6 +117,9 @@ def patch_sensor_entities(sensor_module) -> None:
         def ems_attrs(self):
             base = original_ems_attrs.__get__(self) if original_ems_attrs else {}
             result = dict(base or {})
+            value = self.coordinator.data.get("ems_mode")
+            if value is not None:
+                result["raw_value"] = int(value)
             result.update(_attrs("FC03", 4300, "4300-4300"))
             return result
 
