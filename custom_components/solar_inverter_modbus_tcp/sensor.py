@@ -7,8 +7,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, EMS_MODES
@@ -141,8 +141,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
         if self._baseline is None or self._reset_date != today:
             self._baseline = total
             self._reset_date = today
-        if total < self._baseline:
-            self._baseline = total
+        self._baseline = min(self._baseline, total)
         return round(max(0.0, total - self._baseline), 3)
 
 
