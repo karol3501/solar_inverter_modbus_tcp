@@ -6,5 +6,7 @@
   "documentation": "https://github.com/karol3501/solar_inverter_modbus_tcp",
   "issue_tracker": "https://github.com/karol3501/solar_inverter_modbus_tcp/issues",
   "requirements": [],
+  "dependencies": ["modbus"],
+  "iot_class": "local_polling",
   "codeowners": ["@karol3501"]
 }
