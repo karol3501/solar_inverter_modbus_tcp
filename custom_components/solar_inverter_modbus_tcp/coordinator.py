@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from datetime import timedelta
+import logging
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -50,7 +50,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                         f"FC04 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
                     )
                 return [int(value) for value in values]
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:
                 last_error = err
                 if attempt + 1 < _READ_RETRIES:
                     _LOGGER.warning(
@@ -74,7 +74,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                         f"FC03 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
                     )
                 return [int(value) for value in values]
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:
                 last_error = err
                 if attempt + 1 < _READ_RETRIES:
                     _LOGGER.warning(
@@ -133,6 +133,6 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             return data
         except UpdateFailed:
             raise
-        except Exception as err:  # noqa: BLE001
+        except Exception as err:
             _LOGGER.exception("Modbus telemetry read failed")
             raise UpdateFailed(f"Modbus telemetry read failed: {type(err).__name__}: {err}") from err
