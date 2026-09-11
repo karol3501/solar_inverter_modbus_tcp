@@ -86,10 +86,19 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
         value = self.coordinator.data.get(self.entity_description.data_key)
         if value is None:
             return None
+        if self.entity_description.data_key == "r1023":
+            return "No Fault" if int(value) == 0 else "Fault"
         value = int(value)
         if self.entity_description.signed and value & 0x8000:
             value -= 0x10000
         return value * self.entity_description.scale
+
+    @property
+    def extra_state_attributes(self):
+        if self.entity_description.data_key == "r1023":
+            value = self.coordinator.data.get("r1023")
+            return {"raw_code": int(value)} if value is not None else {"raw_code": None}
+        return None
 
 
 class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
