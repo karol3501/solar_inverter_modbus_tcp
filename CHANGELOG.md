@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.1
+
+### Fixed
+- Changed **BMS Fault Code** register `1023` to a readable status: `0` → **No Fault**, any other value → **Fault**.
+- Preserved the original numeric register value as the `raw_code` entity attribute for diagnostics.
+
 ## 0.9.0-dev5
 
 ### Added
