@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0-dev4
+
+### Improved
+- Marked the development build explicitly as `0.9.0-dev4` so the manifest and development branch version stay synchronized.
+- Continued the status cleanup work from the previous development build: normal status entities use readable states where the Modbus mapping is verified, while raw values remain available through diagnostic attributes.
+- Kept DRM register 1060 out of an invented Active/Inactive mapping until an authoritative register enum is confirmed.
+
+### Fixed
+- Corrected the development version mismatch where the DEV branch manifest still reported `0.9.0`.
+
 ## 0.9.0
 
 ### Added
@@ -42,34 +52,3 @@
 ### Fixed
 - Added a shared Modbus I/O lock so coordinator polling and write operations cannot overlap on the same TCP connection.
 - Added controlled retry handling for intermittent FC03/FC04 timeouts and connection drops.
-
-### Improved
-- Added clearer Modbus error logging with function code and register range information.
-
-## 0.8.3
-
-### Added
-- Added local Home Assistant branding assets (`brand/icon.png` and `brand/logo.png`) for HA 2026.3+.
-
-## 0.8.2
-
-### Improved
-- Updated the integration for the new Home Assistant 2026.9 Modbus connection API using `async_get_unit` and `async_get_temporary_unit`.
-- Removed use of the deprecated `modbus.get_hub` API.
-
-## 0.8.1
-
-### Fixed
-- Fixed Modbus TCP connection setup and validation with the new Home Assistant Modbus API.
-
-## 0.8.0
-
-### Added
-- Added support for the new Home Assistant Modbus connection API.
-- Added a shared coordinator for all inverter data.
-- Added EMS mode selection and Peak Shaving configuration.
-
-## 0.7.2
-
-### Fixed
-- Fixed entity naming and state-class handling for Home Assistant energy sensors.
