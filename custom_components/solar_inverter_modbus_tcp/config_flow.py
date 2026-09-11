@@ -36,7 +36,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         result = await unit.read_holding_registers(4300, 1)
                         if not result:
                             raise RuntimeError("empty response")
-                except Exception as err:  # noqa: BLE001
+                except Exception:
                     errors["base"] = "cannot_connect"
                     _LOGGER.exception("Modbus FC03 register 4300 failed")
                 else:
