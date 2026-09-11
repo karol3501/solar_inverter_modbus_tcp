@@ -106,13 +106,13 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             except Exception:
                 _LOGGER.exception("MODBUS UPDATE FAILED | entry_id=%s", self.entry_id)
                 raise
-            self._debug("MODBUS UPDATE SUCCESS | requests=15 | duration=%.3fs", time.monotonic() - started)
+            self._debug("MODBUS UPDATE SUCCESS | requests=16 | duration=%.3fs", time.monotonic() - started)
             return data
 
     async def _async_update_data_locked(self) -> dict[str, object]:
         try:
             input_blocks = [
-                (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
+                (0, 39), (45, 36), (81, 14), (113, 3), (201, 1), (210, 1), (241, 3),
                 (1022, 4), (1046, 1), (1060, 1), (1078, 18), (2000, 70), (2100, 36),
             ]
             data: dict[str, object] = {}
