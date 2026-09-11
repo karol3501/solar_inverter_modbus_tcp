@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.2
+
+### Fixed
+- Fixed **Peak Shaving** controls so the Home Assistant entity value updates immediately after a user change.
+- Removed the extra FC03 read and FC03 verification read from the Peak Shaving write path when the latest register `4446` value is already available from the coordinator.
+- Peak Shaving now updates the packed register state optimistically before the FC06 write, while the next coordinator poll confirms the actual inverter value.
+- Kept Baseline SOC in the high byte and Reserved SOC in the low byte of register `4446`.
+
 ## 0.9.1
 
 ### Fixed
