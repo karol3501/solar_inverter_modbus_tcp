@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.9.0-dev5
+
+### Added
+- Added raw **HW Fault** register `21`.
+- Added **PV Total Power** from register `26`.
+- Added **Grid Meter Voltage L1-L3** from registers `1047-1049`.
+- Added **Load Energy Total** from register `2070`, while keeping the existing `Load Energy Use Total` register `2056` for comparison.
+- Added **Energy From PV Today** from register `2132`.
+
+### Changed
+- Updated Work Status text mapping to: `Initialising`, `Standby`, `Grid Check`, `Fault`, `Grid Off`, `Bypass`, `PV Charging Battery`, `Generator Mode`, and `Island Mode`.
+- Kept **Safety DSP FM Version** register `201`.
+- Kept **DRM Status** register `1060` as raw numeric data without an invented enum mapping.
+- Kept **BMS Fault Code** register `1023` as raw numeric data.
+- Renamed the Grid Meter link entity to **Grid Meter Link Status**.
+- Renamed the derived Work Status entity from **Work Status Text** to **Work Status**.
+- Split the large FC04 telemetry range into smaller Battery, Inverter, Backup, Grid Meter, and energy blocks so a failed range does not stop unrelated entities from updating.
+- Extended the energy block to include register `2070`.
+
+### Removed
+- Removed ReConnect Counter `210`.
+- Removed PE/PF Voltage `241`.
+- Removed Iso Resistor `242`.
+- Removed Residual Current `243`.
+- Removed Inverter Reactive Power `77-80`.
+- Removed Backup Current `84-86`.
+- Removed Backup Apparent Power `87-90`.
+- Removed PV Inverter Active Power A-C `1090`, `1092`, `1094`.
+
 ## 0.9.0-dev4
 
 ### Improved
