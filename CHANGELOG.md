@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-dev4
+
+### Fixed
+- Split the FC04 telemetry block at registers 45-94 into separate reads for 45-80 and 81-94.
+- Isolated Backup telemetry registers 81-94 from the larger battery/inverter telemetry request so a delayed or failed backup block does not depend on the full 45-94 response.
+- Updated Modbus debug request count from 15 to 16.
+
 ## 0.9.0-dev3
 
 ### Fixed
@@ -93,7 +100,7 @@
 ### Fixed
 - Fixed signed I16 decoding for PV, inverter, and backup current/power/reactive-power registers.
 - Applied the correct `0.1` scale to PV, grid, inverter, and backup voltage registers.
-- Applied the correct `0.01` scale to PV/inverter/backup currents.
+- Applied the correct `0.01` scale to PV/inverter currents.
 - Applied the correct `0.01` scale to grid frequency register 66.
 - Applied the YAML `scale: -1` direction to grid active power registers 1078, 1080, and 1082.
 - Applied the correct `0.1` scale to battery voltage and `0.01` scale to battery current.
