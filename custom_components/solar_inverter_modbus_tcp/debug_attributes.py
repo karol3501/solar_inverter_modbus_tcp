@@ -6,7 +6,7 @@ def _raw_register_info(data_key: str) -> tuple[str, int, str] | None:
         return None
     address = int(data_key[1:])
     i32_starts = {
-        19, 48, 50, 1078, 1080, 1082, 1084, 1086, 1088,
+        19, 21, 48, 50, 1078, 1080, 1082, 1084, 1086, 1088,
         2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070,
     }
     function = "FC03" if address in {259, 4300, 4446, 4447} else "FC04"
