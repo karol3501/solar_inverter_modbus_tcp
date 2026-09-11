@@ -7,6 +7,9 @@
 - Improved Modbus update resilience by keeping the last good data for individual register blocks when a single read fails.
 - Prevented one failed telemetry block from stopping fresh data updates for all other entities.
 - Kept exact Modbus function, address, and register-range diagnostics for failed blocks.
+- Replaced raw numeric status entities with human-readable states for Work Status, BMS Link Status, BMS Fault Status, Grid Meter Link Status, DRM Status, and EMS Mode.
+- Removed duplicate raw EMS/Peak Meter SOC entities from the normal entity list; their raw register values remain available as entity attributes for diagnostics.
+- Added `raw_value` attributes to decoded status entities so the original Modbus value remains available for troubleshooting.
 
 ## 0.9.0-dev2
 
