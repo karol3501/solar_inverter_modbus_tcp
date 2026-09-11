@@ -43,23 +43,26 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
     async def async_select_option(self, option: str) -> None:
         value = NAME_TO_VALUE[option]
 
-        # Some inverter firmware does not respond to FC06 for EMS register 4300.
-        # Use FC16 for the complete EMS settings block (4300-4306), preserving
-        # the current values of the other settings.
-        settings = await self.coordinator.unit.read_holding_registers(4300, 7)
-        if len(settings) != 7:
-            raise RuntimeError(
-                f"EMS settings read returned {len(settings)} registers, expected 7"
-            )
+        # Keep the complete EMS read/write/verify transaction exclusive of
+        # coordinator polling on the shared Modbus TCP connection.
+        async with self.coordinator.modbus_lock:
+            # Some inverter firmware does not respond to FC06 for EMS register 4300.
+            # Use FC16 for the complete EMS settings block (4300-4306), preserving
+            # the current values of the other settings.
+            settings = await self.coordinator.unit.read_holding_registers(4300, 7)
+            if len(settings) != 7:
+                raise RuntimeError(
+                    f"EMS settings read returned {len(settings)} registers, expected 7"
+                )
 
-        settings[0] = value
-        await self.coordinator.unit.write_registers(4300, settings)
+            settings[0] = value
+            await self.coordinator.unit.write_registers(4300, settings)
 
-        values = await self.coordinator.unit.read_holding_registers(4300, 1)
-        if not values or int(values[0]) != value:
-            raise RuntimeError(
-                f"EMS mode write verification failed: expected {value}, got {values!r}"
-            )
+            values = await self.coordinator.unit.read_holding_registers(4300, 1)
+            if not values or int(values[0]) != value:
+                raise RuntimeError(
+                    f"EMS mode write verification failed: expected {value}, got {values!r}"
+                )
 
         updated = dict(self.coordinator.data)
         updated["ems_mode"] = int(values[0])

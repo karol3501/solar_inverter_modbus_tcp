@@ -45,19 +45,20 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
         return float(value) if value is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
-        current = await self.coordinator.unit.read_holding_registers(4446, 1)
-        if not current:
-            raise RuntimeError("FC03 register 4446 returned no data")
-        raw = int(current[0])
-        if self._high_byte:
-            raw = (int(value) << 8) | (raw & 0xFF)
-        else:
-            raw = (raw & 0xFF00) | int(value)
+        async with self.coordinator.modbus_lock:
+            current = await self.coordinator.unit.read_holding_registers(4446, 1)
+            if not current:
+                raise RuntimeError("FC03 register 4446 returned no data")
+            raw = int(current[0])
+            if self._high_byte:
+                raw = (int(value) << 8) | (raw & 0xFF)
+            else:
+                raw = (raw & 0xFF00) | int(value)
 
-        await self.coordinator.unit.write_register(4446, raw)
-        verify = await self.coordinator.unit.read_holding_registers(4446, 1)
-        if not verify or int(verify[0]) != raw:
-            raise RuntimeError(f"Peak shaving write verification failed: expected {raw}, got {verify!r}")
+            await self.coordinator.unit.write_register(4446, raw)
+            verify = await self.coordinator.unit.read_holding_registers(4446, 1)
+            if not verify or int(verify[0]) != raw:
+                raise RuntimeError(f"Peak shaving write verification failed: expected {raw}, got {verify!r}")
 
         updated = dict(self.coordinator.data)
         updated["r4446"] = raw

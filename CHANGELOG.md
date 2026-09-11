@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.4
+
+### Fixed
+- Serialized all Modbus TCP reads and writes through a shared lock so coordinator polling cannot overlap with EMS or Peak Shaving control operations.
+- Added one controlled retry for failed FC03/FC04 reads to recover from transient Modbus timeouts or connection drops without immediately aborting the update cycle.
+- Added retry diagnostics identifying the exact Modbus register range that failed.
+
 ## 0.8.3
 
 ### Fixed
@@ -9,7 +16,7 @@
 ## 0.8.2
 
 ### Fixed
-- Fixed the FC04 energy telemetry read range: register 2068 is an I32 value and requires register 2069 for its low word.
+- Fixed the FC04 energy telemetry read range: register 2068 is an I32 value and requires register 2069 for the low word.
 - Prevented `KeyError: 'r2069'` during coordinator updates.
 
 ## 0.8.1

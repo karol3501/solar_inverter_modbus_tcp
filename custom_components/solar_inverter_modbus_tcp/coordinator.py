@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 import logging
 
@@ -10,6 +11,9 @@ from modbus_connection import ModbusUnit
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+_READ_RETRIES = 2
+_RETRY_DELAY = 0.5
 
 
 def _i16(value: int) -> int:
@@ -33,21 +37,64 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     def __init__(self, hass: HomeAssistant, unit: ModbusUnit, entry_id: str, update_interval: int = 10) -> None:
         self.unit = unit
         self.entry_id = entry_id
+        self.modbus_lock = asyncio.Lock()
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
 
     async def _read_input(self, address: int, count: int) -> list[int]:
-        values = await self.unit.read_input_registers(address, count)
-        if len(values) != count:
-            raise UpdateFailed(f"FC04 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}")
-        return [int(value) for value in values]
+        last_error: Exception | None = None
+        for attempt in range(_READ_RETRIES):
+            try:
+                values = await self.unit.read_input_registers(address, count)
+                if len(values) != count:
+                    raise UpdateFailed(
+                        f"FC04 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
+                    )
+                return [int(value) for value in values]
+            except Exception as err:
+                last_error = err
+                if attempt + 1 < _READ_RETRIES:
+                    _LOGGER.warning(
+                        "FC04 read %s-%s failed (%s); retrying in %.1fs",
+                        address,
+                        address + count - 1,
+                        err,
+                        _RETRY_DELAY,
+                    )
+                    await asyncio.sleep(_RETRY_DELAY)
+        assert last_error is not None
+        raise last_error
 
     async def _read_holding(self, address: int, count: int) -> list[int]:
-        values = await self.unit.read_holding_registers(address, count)
-        if len(values) != count:
-            raise UpdateFailed(f"FC03 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}")
-        return [int(value) for value in values]
+        last_error: Exception | None = None
+        for attempt in range(_READ_RETRIES):
+            try:
+                values = await self.unit.read_holding_registers(address, count)
+                if len(values) != count:
+                    raise UpdateFailed(
+                        f"FC03 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
+                    )
+                return [int(value) for value in values]
+            except Exception as err:
+                last_error = err
+                if attempt + 1 < _READ_RETRIES:
+                    _LOGGER.warning(
+                        "FC03 read %s-%s failed (%s); retrying in %.1fs",
+                        address,
+                        address + count - 1,
+                        err,
+                        _RETRY_DELAY,
+                    )
+                    await asyncio.sleep(_RETRY_DELAY)
+        assert last_error is not None
+        raise last_error
 
     async def _async_update_data(self) -> dict[str, object]:
+        # Keep the complete read cycle exclusive of writes from select/number
+        # entities. A Modbus TCP connection must not have overlapping requests.
+        async with self.modbus_lock:
+            return await self._async_update_data_locked()
+
+    async def _async_update_data_locked(self) -> dict[str, object]:
         try:
             input_blocks = [
                 (0, 39), (45, 50), (113, 3), (201, 1), (210, 1), (241, 3),
