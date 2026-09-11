@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+import time
+
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
@@ -8,6 +11,8 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _device_info() -> DeviceInfo:
@@ -40,12 +45,24 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
         self._attr_device_info = _device_info()
 
     @property
+    def extra_state_attributes(self):
+        return {
+            "modbus_function": "FC06",
+            "modbus_address": "4446",
+            "modbus_registers": "4446-4446",
+            "modbus_role": "high byte" if self._high_byte else "low byte",
+        }
+
+    @property
     def native_value(self) -> float | None:
         value = self.coordinator.data.get(self._data_key)
         return float(value) if value is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
         async with self.coordinator.modbus_lock:
+            started = time.monotonic()
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS READ | FC03 | address=4446 | count=1 | range=4446-4446")
             current = await self.coordinator.unit.read_holding_registers(4446, 1)
             if not current:
                 raise RuntimeError("FC03 register 4446 returned no data")
@@ -55,10 +72,16 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             else:
                 raw = (raw & 0xFF00) | int(value)
 
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE | FC06 | address=4446 | value=%s", raw)
             await self.coordinator.unit.write_register(4446, raw)
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS VERIFY | FC03 | address=4446 | count=1")
             verify = await self.coordinator.unit.read_holding_registers(4446, 1)
             if not verify or int(verify[0]) != raw:
                 raise RuntimeError(f"Peak shaving write verification failed: expected {raw}, got {verify!r}")
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE SUCCESS | FC06 | address=4446 | duration=%.3fs", time.monotonic() - started)
 
         updated = dict(self.coordinator.data)
         updated["r4446"] = raw

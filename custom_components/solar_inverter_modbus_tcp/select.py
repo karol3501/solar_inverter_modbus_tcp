@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from homeassistant.components.select import SelectEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -8,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
 
+_LOGGER = logging.getLogger(__name__)
 OPTIONS = list(EMS_MODES.values())
 NAME_TO_VALUE = {name: value for value, name in EMS_MODES.items()}
 
@@ -34,6 +37,15 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
         }
 
     @property
+    def extra_state_attributes(self):
+        return {
+            "modbus_function": "FC16",
+            "modbus_address": "4300",
+            "modbus_registers": "4300-4306",
+            "modbus_verify": "FC03 address=4300",
+        }
+
+    @property
     def current_option(self) -> str | None:
         value = self.coordinator.data.get("ems_mode")
         if value is None:
@@ -42,27 +54,26 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
     async def async_select_option(self, option: str) -> None:
         value = NAME_TO_VALUE[option]
-
-        # Keep the complete EMS read/write/verify transaction exclusive of
-        # coordinator polling on the shared Modbus TCP connection.
         async with self.coordinator.modbus_lock:
-            # Some inverter firmware does not respond to FC06 for EMS register 4300.
-            # Use FC16 for the complete EMS settings block (4300-4306), preserving
-            # the current values of the other settings.
+            started = __import__("time").monotonic()
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE | FC03 | address=4300 | count=7 | range=4300-4306")
             settings = await self.coordinator.unit.read_holding_registers(4300, 7)
             if len(settings) != 7:
-                raise RuntimeError(
-                    f"EMS settings read returned {len(settings)} registers, expected 7"
-                )
+                raise RuntimeError(f"EMS settings read returned {len(settings)} registers, expected 7")
 
             settings[0] = value
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE | FC16 | address=4300 | count=7 | range=4300-4306 | values=%s", settings)
             await self.coordinator.unit.write_registers(4300, settings)
 
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS VERIFY | FC03 | address=4300 | count=1")
             values = await self.coordinator.unit.read_holding_registers(4300, 1)
             if not values or int(values[0]) != value:
-                raise RuntimeError(
-                    f"EMS mode write verification failed: expected {value}, got {values!r}"
-                )
+                raise RuntimeError(f"EMS mode write verification failed: expected {value}, got {values!r}")
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE SUCCESS | FC16 | range=4300-4306 | duration=%.3fs", __import__("time").monotonic() - started)
 
         updated = dict(self.coordinator.data)
         updated["ems_mode"] = int(values[0])

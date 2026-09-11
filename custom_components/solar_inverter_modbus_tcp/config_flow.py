@@ -9,7 +9,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.data_entry_flow import FlowResult
 from modbus_connection import ModbusTcpParams
 
-from .const import CONF_UNIT_ID, DEFAULT_PORT, DEFAULT_UNIT_ID, DOMAIN
+from .const import CONF_DEBUG_LOGGING, CONF_SCAN_INTERVAL, CONF_UNIT_ID, DEFAULT_PORT, DEFAULT_UNIT_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,15 +49,45 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return self.async_create_entry(
                         title=f"Solar Inverter ({host})",
                         data={CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id},
+                        options={
+                            CONF_SCAN_INTERVAL: 10,
+                            CONF_DEBUG_LOGGING: bool(user_input.get(CONF_DEBUG_LOGGING, False)),
+                        },
                     )
 
         schema = vol.Schema(
             {
                 vol.Required(CONF_HOST): str,
-                vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(
-                    vol.Coerce(int), vol.Range(min=1, max=65535)
-                ),
+                vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Required(CONF_UNIT_ID, default=str(DEFAULT_UNIT_ID)): str,
+                vol.Optional(CONF_DEBUG_LOGGING, default=False): bool,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return SolarInverterOptionsFlow(config_entry)
+
+
+class SolarInverterOptionsFlow(config_entries.OptionsFlow):
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None) -> FlowResult:
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        schema = vol.Schema(
+            {
+                vol.Optional(
+                    CONF_DEBUG_LOGGING,
+                    default=self.config_entry.options.get(CONF_DEBUG_LOGGING, False),
+                ): bool,
+                vol.Optional(
+                    CONF_SCAN_INTERVAL,
+                    default=self.config_entry.options.get(CONF_SCAN_INTERVAL, 10),
+                ): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

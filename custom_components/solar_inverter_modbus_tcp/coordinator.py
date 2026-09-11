@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
@@ -34,65 +35,79 @@ def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     """Poll all telemetry used by the original Modbus YAML configuration."""
 
-    def __init__(self, hass: HomeAssistant, unit: ModbusUnit, entry_id: str, update_interval: int = 10) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        unit: ModbusUnit,
+        entry_id: str,
+        update_interval: int = 10,
+        debug_logging: bool = False,
+    ) -> None:
         self.unit = unit
         self.entry_id = entry_id
+        self.debug_logging = debug_logging
         self.modbus_lock = asyncio.Lock()
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
 
-    async def _read_input(self, address: int, count: int) -> list[int]:
+    def _debug(self, message: str, *args: object) -> None:
+        if self.debug_logging:
+            _LOGGER.debug(message, *args)
+
+    async def _read(self, function: str, address: int, count: int) -> list[int]:
         last_error: Exception | None = None
-        for attempt in range(_READ_RETRIES):
+        end = address + count - 1
+        reader = self.unit.read_input_registers if function == "FC04" else self.unit.read_holding_registers
+        for attempt in range(1, _READ_RETRIES + 1):
+            started = time.monotonic()
+            self._debug(
+                "MODBUS READ | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s",
+                function, address, count, address, end, attempt, _READ_RETRIES,
+            )
             try:
-                values = await self.unit.read_input_registers(address, count)
+                values = await reader(address, count)
                 if len(values) != count:
                     raise UpdateFailed(
-                        f"FC04 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
+                        f"{function} read {address}-{end} returned {len(values)} registers, expected {count}"
                     )
-                return [int(value) for value in values]
+                result = [int(value) for value in values]
+                self._debug(
+                    "MODBUS RESPONSE | %s | range=%s-%s | registers=%s | duration=%.3fs | values=%s",
+                    function, address, end, len(result), time.monotonic() - started, result,
+                )
+                return result
             except Exception as err:  # noqa: BLE001
                 last_error = err
-                if attempt + 1 < _READ_RETRIES:
+                duration = time.monotonic() - started
+                if attempt < _READ_RETRIES:
                     _LOGGER.warning(
-                        "FC04 read %s-%s failed (%s); retrying in %.1fs",
-                        address,
-                        address + count - 1,
-                        err,
-                        _RETRY_DELAY,
+                        "MODBUS READ RETRY | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s | duration=%.3fs | error=%s",
+                        function, address, count, address, end, attempt, _READ_RETRIES, duration, err,
                     )
                     await asyncio.sleep(_RETRY_DELAY)
+                else:
+                    _LOGGER.error(
+                        "MODBUS READ FAILED | %s | address=%s | count=%s | range=%s-%s | attempts=%s | duration=%.3fs | error=%s",
+                        function, address, count, address, end, _READ_RETRIES, duration, err,
+                    )
         assert last_error is not None
         raise last_error
+
+    async def _read_input(self, address: int, count: int) -> list[int]:
+        return await self._read("FC04", address, count)
 
     async def _read_holding(self, address: int, count: int) -> list[int]:
-        last_error: Exception | None = None
-        for attempt in range(_READ_RETRIES):
-            try:
-                values = await self.unit.read_holding_registers(address, count)
-                if len(values) != count:
-                    raise UpdateFailed(
-                        f"FC03 read {address}-{address + count - 1} returned {len(values)} registers, expected {count}"
-                    )
-                return [int(value) for value in values]
-            except Exception as err:  # noqa: BLE001
-                last_error = err
-                if attempt + 1 < _READ_RETRIES:
-                    _LOGGER.warning(
-                        "FC03 read %s-%s failed (%s); retrying in %.1fs",
-                        address,
-                        address + count - 1,
-                        err,
-                        _RETRY_DELAY,
-                    )
-                    await asyncio.sleep(_RETRY_DELAY)
-        assert last_error is not None
-        raise last_error
+        return await self._read("FC03", address, count)
 
     async def _async_update_data(self) -> dict[str, object]:
-        # Keep the complete read cycle exclusive of writes from select/number
-        # entities. A Modbus TCP connection must not have overlapping requests.
         async with self.modbus_lock:
-            return await self._async_update_data_locked()
+            started = time.monotonic()
+            try:
+                data = await self._async_update_data_locked()
+            except Exception:
+                _LOGGER.exception("MODBUS UPDATE FAILED | entry_id=%s", self.entry_id)
+                raise
+            self._debug("MODBUS UPDATE SUCCESS | requests=15 | duration=%.3fs", time.monotonic() - started)
+            return data
 
     async def _async_update_data_locked(self) -> dict[str, object]:
         try:
@@ -107,7 +122,6 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             for address, count in ((259, 1), (4300, 8), (4446, 2)):
                 _put_block(data, await self._read_holding(address, count), address)
 
-            # 32-bit values.
             data["sw_fault"] = _i32(data["r19"], data["r20"])
             data["r48"] = _i32(data["r48"], data["r49"])
             data["r50"] = _i32(data["r50"], data["r51"])
