@@ -37,8 +37,6 @@ def patch_sensor_entities(sensor_module) -> None:
     if getattr(sensor_module.SolarInverterSensor, "_solar_modbus_debug_patched", False):
         return
 
-    # Remove raw duplicate/status-register entities that are now represented by
-    # decoded status entities or the dedicated control entity.
     sensor_module.DESCRIPTION[:] = [
         description
         for description in sensor_module.DESCRIPTION
@@ -111,6 +109,7 @@ def patch_sensor_entities(sensor_module) -> None:
 
     ems_cls = getattr(sensor_module, "SolarInverterEmsModeSensor", None)
     if ems_cls:
+        ems_cls._attr_name = "EMS Mode"
         original_ems_attrs = getattr(ems_cls, "extra_state_attributes", None)
 
         @property
