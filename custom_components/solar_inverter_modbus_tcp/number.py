@@ -59,32 +59,43 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
         return float(value) if value is not None else None
 
     async def async_set_native_value(self, value: float) -> None:
+        requested = max(10, min(100, int(value)))
+
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
-            if self.coordinator.debug_logging:
-                _LOGGER.debug("MODBUS READ | FC03 | address=4446 | count=1 | range=4446-4446")
-            current = await self.coordinator.unit.read_holding_registers(4446, 1)
-            if not current:
-                raise RuntimeError("FC03 register 4446 returned no data")
-            raw = int(current[0])
+
+            # Use the latest coordinator value so both controls operate on the
+            # same packed register without an unnecessary FC03 request.
+            current_value = self.coordinator.data.get("r4446")
+            if current_value is None:
+                current = await self.coordinator.unit.read_holding_registers(4446, 1)
+                if not current:
+                    raise RuntimeError("FC03 register 4446 returned no data")
+                current_value = int(current[0])
+
+            current_raw = int(current_value)
             if self._high_byte:
-                raw = (int(value) << 8) | (raw & 0xFF)
+                raw = (requested << 8) | (current_raw & 0xFF)
             else:
-                raw = (raw & 0xFF00) | int(value)
+                raw = (current_raw & 0xFF00) | requested
+
+            # Optimistic update: reflect the user's change immediately.
+            # The next coordinator poll confirms the actual inverter value.
+            updated = dict(self.coordinator.data)
+            updated["r4446"] = raw
+            updated["peak_meter_baseline_soc"] = raw // 256
+            updated["peak_meter_reserved_soc"] = raw % 256
+            self.coordinator.async_set_updated_data(updated)
+            self.async_write_ha_state()
 
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE | FC06 | address=4446 | value=%s", raw)
-            await self.coordinator.unit.write_register(4446, raw)
-            if self.coordinator.debug_logging:
-                _LOGGER.debug("MODBUS VERIFY | FC03 | address=4446 | count=1")
-            verify = await self.coordinator.unit.read_holding_registers(4446, 1)
-            if not verify or int(verify[0]) != raw:
-                raise RuntimeError(f"Peak shaving write verification failed: expected {raw}, got {verify!r}")
+
+            try:
+                await self.coordinator.unit.write_register(4446, raw)
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
+                raise
+
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE SUCCESS | FC06 | address=4446 | duration=%.3fs", time.monotonic() - started)
-
-        updated = dict(self.coordinator.data)
-        updated["r4446"] = raw
-        updated["peak_meter_baseline_soc"] = raw // 256
-        updated["peak_meter_reserved_soc"] = raw % 256
-        self.coordinator.async_set_updated_data(updated)
