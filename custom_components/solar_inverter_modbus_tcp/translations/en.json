@@ -16,6 +16,15 @@
           "unit_id": "Modbus Unit ID, normally 1.",
           "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings."
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure solar inverter",
+        "description": "Update the Modbus TCP connection details. The connection will be tested before the changes are applied.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus Unit ID"
+        }
       }
     },
     "error": {
