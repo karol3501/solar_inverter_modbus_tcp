@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0-dev3
+
+### Fixed
+- Set Battery Voltage display precision to 1 decimal place so values such as `51.0 V` are shown instead of `51 V`.
+
 ## 0.9.0-dev2
 
 ### Added
