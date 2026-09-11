@@ -4,20 +4,47 @@ on:
   push:
     branches:
       - main
+    paths:
+      - CHANGELOG.md
+      - custom_components/solar_inverter_modbus_tcp/manifest.json
 
-permissions:
-  contents: write
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
+  validate:
+    name: Validate release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: HACS validation
+        uses: hacs/action@885037da508419fd08c13515967aec868dfdee2d # main
+        with:
+          category: integration
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@a7c616ce81ccda50150bf1595786c71b1883fabb # master
+
   release:
     name: Create Release
+    needs: validate
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Read integration version
         id: version
@@ -25,7 +52,7 @@ jobs:
           VERSION=$(python - <<'PY'
           import json
 
-          with open("custom_components/solar_inverter_modbus_tcp/manifest.json") as f:
+          with open("custom_components/solar_inverter_modbus_tcp/manifest.json", encoding="utf-8") as f:
               data = json.load(f)
 
           print(data["version"])
@@ -34,14 +61,13 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Check changelog
-        id: changelog
+      - name: Validate changelog
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           python - <<'PY'
-          import re
           import os
+          import re
           import sys
 
           version = os.environ["VERSION"]
@@ -50,22 +76,18 @@ jobs:
               text = f.read()
 
           pattern = rf"(?ms)^## \[?{re.escape(version)}\]?.*?(?=^## |\Z)"
-
           if not re.search(pattern, text):
               print(f"ERROR: CHANGELOG.md does not contain a section for version {version}")
               sys.exit(1)
-
-          print(f"Found changelog entry for version {version}")
           PY
 
-      - name: Extract changelog
-        id: release_notes
+      - name: Extract release notes
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           python - <<'PY' > release_notes.md
-          import re
           import os
+          import re
           import sys
 
           version = os.environ["VERSION"]
@@ -75,7 +97,6 @@ jobs:
 
           pattern = rf"(?ms)^## \[?{re.escape(version)}\]?.*?(?=^## |\Z)"
           match = re.search(pattern, text)
-
           if not match:
               print(f"ERROR: CHANGELOG.md does not contain version {version}", file=sys.stderr)
               sys.exit(1)
@@ -83,39 +104,33 @@ jobs:
           print(match.group(0).strip())
           PY
 
-      - name: Check release
-        id: release
+      - name: Check existing release
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "ERROR: GitHub release $VERSION already exists. Bump manifest.json version before releasing."
+            exit 1
           fi
 
-      - name: Check tag
-        id: tag
+      - name: Check existing tag
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+            TAG_SHA=$(git rev-list -n 1 "$VERSION")
+            if [ "$TAG_SHA" != "${GITHUB_SHA}" ]; then
+              echo "ERROR: tag $VERSION already exists but points to $TAG_SHA instead of ${GITHUB_SHA}."
+              exit 1
+            fi
+            echo "Tag $VERSION already points to this commit."
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            git tag "$VERSION" "$GITHUB_SHA"
+            git push origin "$VERSION"
           fi
 
-      - name: Create tag
-        if: steps.release.outputs.exists == 'false' && steps.tag.outputs.exists == 'false'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          git tag "$VERSION"
-          git push origin "$VERSION"
-
       - name: Create release
-        if: steps.release.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -123,14 +138,4 @@ jobs:
           gh release create "$VERSION" \
             --title "$VERSION" \
             --notes-file release_notes.md \
-            --target main
-
-      - name: Update existing release
-        if: steps.release.outputs.exists == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          gh release edit "$VERSION" \
-            --title "$VERSION" \
-            --notes-file release_notes.md
+            --target "$GITHUB_SHA"
