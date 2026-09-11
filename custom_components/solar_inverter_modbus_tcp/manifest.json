@@ -1,12 +1,12 @@
 {
   "domain": "solar_inverter_modbus_tcp",
   "name": "Solar Inverter Modbus TCP",
-  "version": "0.8.4",
+  "codeowners": ["@karol3501"],
   "config_flow": true,
+  "dependencies": ["modbus"],
   "documentation": "https://github.com/karol3501/solar_inverter_modbus_tcp",
+  "iot_class": "local_polling",
   "issue_tracker": "https://github.com/karol3501/solar_inverter_modbus_tcp/issues",
   "requirements": [],
-  "dependencies": ["modbus"],
-  "iot_class": "local_polling",
-  "codeowners": ["@karol3501"]
+  "version": "0.8.4"
 }
