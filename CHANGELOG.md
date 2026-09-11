@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.5
+
+### Fixed
+- Validated the Modbus TCP port before attempting a connection and rejected empty host values in the config flow.
+- Kept Modbus connection validation errors user-facing without emitting a full exception traceback for normal connection failures.
+- Retained the shared Modbus I/O lock and controlled FC03/FC04 retry handling introduced for intermittent timeout recovery.
+
+### Improved
+- Improved config-flow input handling for invalid Unit ID values.
+
 ## 0.8.4
 
 ### Fixed

@@ -8,5 +8,5 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/karol3501/solar_inverter_modbus_tcp/issues",
   "requirements": [],
-  "version": "0.8.4"
+  "version": "0.8.5"
 }

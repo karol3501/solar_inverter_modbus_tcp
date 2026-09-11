@@ -18,16 +18,20 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None) -> FlowResult:
-        errors = {}
+        errors: dict[str, str] = {}
         if user_input is not None:
             host = user_input[CONF_HOST].strip()
             port = int(user_input[CONF_PORT])
             try:
                 unit_id = int(user_input[CONF_UNIT_ID])
-            except ValueError:
+            except (TypeError, ValueError):
                 unit_id = -1
 
-            if not 1 <= unit_id <= 247:
+            if not host:
+                errors[CONF_HOST] = "invalid_host"
+            elif not 1 <= port <= 65535:
+                errors[CONF_PORT] = "invalid_port"
+            elif not 1 <= unit_id <= 247:
                 errors[CONF_UNIT_ID] = "invalid_unit_id"
             else:
                 try:
@@ -36,9 +40,9 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         result = await unit.read_holding_registers(4300, 1)
                         if not result:
                             raise RuntimeError("empty response")
-                except Exception:
+                except Exception as err:  # noqa: BLE001
                     errors["base"] = "cannot_connect"
-                    _LOGGER.exception("Modbus FC03 register 4300 failed")
+                    _LOGGER.warning("Unable to validate Modbus connection to %s:%s: %s", host, port, err)
                 else:
                     await self.async_set_unique_id(f"{host}:{port}:{unit_id}")
                     self._abort_if_unique_id_configured()
@@ -50,7 +54,9 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_HOST): str,
-                vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.Coerce(int),
+                vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=65535)
+                ),
                 vol.Required(CONF_UNIT_ID, default=str(DEFAULT_UNIT_ID)): str,
             }
         )

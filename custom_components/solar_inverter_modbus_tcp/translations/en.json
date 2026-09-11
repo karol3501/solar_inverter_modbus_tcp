@@ -18,6 +18,8 @@
     },
     "error": {
       "cannot_connect": "Unable to connect to the inverter or read holding register 4300.",
+      "invalid_host": "Host cannot be empty.",
+      "invalid_port": "Port must be between 1 and 65535.",
       "invalid_unit_id": "Unit ID must be between 1 and 247."
     },
     "abort": {
