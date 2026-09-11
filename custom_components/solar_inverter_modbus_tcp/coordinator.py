@@ -39,14 +39,7 @@ def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     """Poll all telemetry used by the original Modbus YAML configuration."""
 
-    def __init__(
-        self,
-        hass: HomeAssistant,
-        unit: ModbusUnit,
-        entry_id: str,
-        update_interval: int = 10,
-        debug_logging: bool = False,
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, unit: ModbusUnit, entry_id: str, update_interval: int = 10, debug_logging: bool = False) -> None:
         self.unit = unit
         self.entry_id = entry_id
         self.debug_logging = debug_logging
@@ -66,36 +59,22 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         reader = self.unit.read_input_registers if function == "FC04" else self.unit.read_holding_registers
         for attempt in range(1, _READ_RETRIES + 1):
             started = time.monotonic()
-            self._debug(
-                "MODBUS READ | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s",
-                function, address, count, address, end, attempt, _READ_RETRIES,
-            )
+            self._debug("MODBUS READ | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s", function, address, count, address, end, attempt, _READ_RETRIES)
             try:
                 values = await reader(address, count)
                 if len(values) != count:
-                    raise UpdateFailed(
-                        f"{function} read {address}-{end} returned {len(values)} registers, expected {count}"
-                    )
+                    raise UpdateFailed(f"{function} read {address}-{end} returned {len(values)} registers, expected {count}")
                 result = [int(value) for value in values]
-                self._debug(
-                    "MODBUS RESPONSE | %s | range=%s-%s | registers=%s | duration=%.3fs | values=%s",
-                    function, address, end, len(result), time.monotonic() - started, result,
-                )
+                self._debug("MODBUS RESPONSE | %s | range=%s-%s | registers=%s | duration=%.3fs | values=%s", function, address, end, len(result), time.monotonic() - started, result)
                 return result
             except Exception as err:  # noqa: BLE001
                 last_error = err
                 duration = time.monotonic() - started
                 if attempt < _READ_RETRIES:
-                    _LOGGER.warning(
-                        "MODBUS READ RETRY | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s | duration=%.3fs | error=%s",
-                        function, address, count, address, end, attempt, _READ_RETRIES, duration, err,
-                    )
+                    _LOGGER.warning("MODBUS READ RETRY | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s | duration=%.3fs | error=%s", function, address, count, address, end, attempt, _READ_RETRIES, duration, err)
                     await asyncio.sleep(_RETRY_DELAY)
                 else:
-                    _LOGGER.error(
-                        "MODBUS READ FAILED | %s | address=%s | count=%s | range=%s-%s | attempts=%s | duration=%.3fs | error=%s",
-                        function, address, count, address, end, _READ_RETRIES, duration, err,
-                    )
+                    _LOGGER.error("MODBUS READ FAILED | %s | address=%s | count=%s | range=%s-%s | attempts=%s | duration=%.3fs | error=%s", function, address, count, address, end, _READ_RETRIES, duration, err)
         assert last_error is not None
         raise last_error
 
@@ -114,18 +93,13 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 _LOGGER.exception("MODBUS UPDATE FAILED | entry_id=%s", self.entry_id)
                 raise
             self._last_data = data.copy()
-            self._debug(
-                "MODBUS UPDATE SUCCESS | successful=%s | failed=%s | duration=%.3fs",
-                self._successful_requests,
-                self._failed_requests,
-                time.monotonic() - started,
-            )
+            self._debug("MODBUS UPDATE SUCCESS | successful=%s | failed=%s | duration=%.3fs", self._successful_requests, self._failed_requests, time.monotonic() - started)
             return data
 
     async def _async_update_data_locked(self) -> dict[str, object]:
         input_blocks = [
             (0, 39),
-            (45, 6),
+            (45, 7),
             (62, 15),
             (81, 3),
             (91, 4),
@@ -147,27 +121,15 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         for function, blocks in (("FC04", input_blocks), ("FC03", holding_blocks)):
             for address, count in blocks:
                 try:
-                    if function == "FC04":
-                        values = await self._read_input(address, count)
-                    else:
-                        values = await self._read_holding(address, count)
+                    values = await (self._read_input(address, count) if function == "FC04" else self._read_holding(address, count))
                     _put_block(data, values, address)
                     self._successful_requests += 1
                 except Exception as err:  # noqa: BLE001
                     self._failed_requests += 1
-                    _LOGGER.warning(
-                        "MODBUS BLOCK SKIPPED | %s | address=%s | range=%s-%s | using last good data | error=%s",
-                        function,
-                        address,
-                        address,
-                        address + count - 1,
-                        err,
-                    )
+                    _LOGGER.warning("MODBUS BLOCK SKIPPED | %s | address=%s | range=%s-%s | using last good data | error=%s", function, address, address, address + count - 1, err)
 
         if self._successful_requests == 0:
-            raise UpdateFailed(
-                f"Modbus telemetry update failed: all {total_requests} requests failed"
-            )
+            raise UpdateFailed(f"Modbus telemetry update failed: all {total_requests} requests failed")
 
         if "r21" in data and "r22" in data:
             data["r21"] = _u32(data["r21"], data["r22"])
@@ -182,11 +144,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 data[key] = _i32(data[high_key], data[low_key])
 
         if "r0" in data:
-            data["work_status_text"] = {
-                0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising",
-                4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery",
-                8: "Generator Mode", 9: "Island Mode",
-            }.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
+            data["work_status_text"] = {0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising", 4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery", 8: "Generator Mode", 9: "Island Mode"}.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
         if all(f"r{x}" in data for x in (1078, 1080, 1082)):
