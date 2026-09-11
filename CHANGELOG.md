@@ -3,7 +3,7 @@
 ## 0.9.0-dev5
 
 ### Added
-- Added raw **HW Fault** register `21`.
+- Added raw **HW Fault** register `21` as a 32-bit value (`21-22`).
 - Added **PV Total Power** from register `26`.
 - Added **Grid Meter Voltage L1-L3** from registers `1047-1049`.
 - Added **Load Energy Total** from register `2070`, while keeping the existing `Load Energy Use Total` register `2056` for comparison.
