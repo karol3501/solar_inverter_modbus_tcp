@@ -6,8 +6,8 @@ def _raw_register_info(data_key: str) -> tuple[str, int, str] | None:
         return None
     address = int(data_key[1:])
     i32_starts = {
-        19, 48, 50, 1078, 1080, 1082, 1084, 1086, 1088, 1090, 1092, 1094,
-        2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068,
+        19, 48, 50, 1078, 1080, 1082, 1084, 1086, 1088,
+        2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070,
     }
     function = "FC03" if address in {259, 4300, 4446, 4447} else "FC04"
     count = 2 if address in i32_starts else 1
@@ -27,7 +27,6 @@ def _attrs(function: str, address: int, registers: str, source: str | None = Non
 
 STATUS_ENTITIES = {
     "r1022": ("BMS Link Status", {0: "Disconnected", 1: "Connected"}),
-    "r1023": ("BMS Fault Status", {0: "No Fault"}),
     "r1046": ("Grid Meter Link Status", {0: "Disconnected", 1: "Connected"}),
 }
 
@@ -52,8 +51,6 @@ def patch_sensor_entities(sensor_module) -> None:
         if data_key in STATUS_ENTITIES and raw is not None:
             _, status_map = STATUS_ENTITIES[data_key]
             raw_value = int(raw)
-            if data_key == "r1023":
-                return "No Fault" if raw_value == 0 else "Fault"
             return status_map.get(raw_value, f"Unknown ({raw_value})")
         return original_native_value.fget(self)
 
