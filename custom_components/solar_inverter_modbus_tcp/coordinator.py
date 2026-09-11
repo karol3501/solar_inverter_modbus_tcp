@@ -27,6 +27,10 @@ def _i32(hi: int, lo: int) -> int:
     return raw - 0x100000000 if raw & 0x80000000 else raw
 
 
+def _u32(hi: int, lo: int) -> int:
+    return (int(hi) << 16) | int(lo)
+
+
 def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
     for offset, value in enumerate(values):
         data[f"r{start + offset}"] = int(value)
@@ -165,9 +169,11 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 f"Modbus telemetry update failed: all {total_requests} requests failed"
             )
 
+        if "r21" in data and "r22" in data:
+            data["r21"] = _u32(data["r21"], data["r22"])
+
         for key, high_key, low_key in (
             ("sw_fault", "r19", "r20"),
-            ("hw_fault", "r21", "r22"),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (48, 50)),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088)),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070)),
