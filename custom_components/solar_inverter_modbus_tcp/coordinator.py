@@ -130,7 +130,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             (1022, 4),
             (1046, 4),
             (1060, 1),
-            (1078, 18),
+            (1078, 12),
             (2000, 71),
             (2100, 36),
         ]
