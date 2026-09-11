@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.3
+
+### Fixed
+- Removed the unused `noqa` directive from the Peak Shaving write exception handler so Ruff `RUF100` passes cleanly.
+
 ## 0.9.2
 
 ### Fixed
@@ -62,7 +67,7 @@
 - Added explicit error and retry messages with the exact Modbus address and register range that failed.
 - Added Modbus metadata to entity state attributes so diagnostic entities expose their function code, address and register range.
 - Added options for debug logging and polling interval without removing/re-adding the integration.
-- Added a **Reconfigure** action to the integration menu for changing the Modbus TCP host, port, and Unit ID without deleting and adding the integration again.
+- Added a **Reconfigure** action to the integration menu for changing the Modbus TCP host, port, and Unit ID without deleting the integration again.
 
 ### Improved
 - Added coordinator update timing and request-count diagnostics when debug logging is enabled.
