@@ -118,16 +118,15 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            TAG_SHA=$(git rev-list -n 1 "$VERSION")
-            if [ "$TAG_SHA" != "${GITHUB_SHA}" ]; then
-              echo "ERROR: tag $VERSION already exists but points to $TAG_SHA instead of ${GITHUB_SHA}."
-              exit 1
-            fi
+          TAG_SHA=$(git ls-remote origin "refs/tags/$VERSION" | cut -f1)
+          if [ -n "$TAG_SHA" ] && [ "$TAG_SHA" != "${GITHUB_SHA}" ]; then
+            echo "ERROR: tag $VERSION already exists but points to $TAG_SHA instead of ${GITHUB_SHA}."
+            exit 1
+          fi
+          if [ -n "$TAG_SHA" ]; then
             echo "Tag $VERSION already points to this commit."
           else
-            git tag "$VERSION" "$GITHUB_SHA"
-            git push origin "$VERSION"
+            echo "Tag $VERSION does not exist yet; gh release create will create it."
           fi
 
       - name: Create release
