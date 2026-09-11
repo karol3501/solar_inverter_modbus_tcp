@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0-dev2
+
+### Added
+- Added a **Reconfigure** action to the integration menu for changing the Modbus TCP host, port, and Unit ID without deleting and adding the integration again.
+- Added connection validation before applying reconfigured Modbus TCP settings.
+
+### Improved
+- Reconfigure keeps the existing integration entry and reloads it automatically after a successful connection test.
+
 ## 0.9.0-dev1
 
 ### Added
