@@ -29,7 +29,6 @@ STATUS_ENTITIES = {
     "r1022": ("BMS Link Status", {0: "Disconnected", 1: "Connected"}),
     "r1023": ("BMS Fault Status", {0: "No Fault"}),
     "r1046": ("Grid Meter Link Status", {0: "Disconnected", 1: "Connected"}),
-    "r1060": ("DRM Status", {0: "Inactive", 1: "Active"}),
 }
 
 
@@ -79,7 +78,7 @@ def patch_sensor_entities(sensor_module) -> None:
         "work_status_text": ("FC04", 0, "0-0", "r0"),
         "total_pv_power": ("FC04", 29, "29,32,35,38", "r29+r32+r35+r38"),
         "total_grid_power": ("FC04", 1078, "1078-1083", "r1078-r1083"),
-        "total_inverter_power": ("FC04", 74, "74-76", "r74-r76"),
+        "total_inverter_power": ("FC04", 74, "74-76", "r74+r75+r76"),
         "load_power": ("derived", 0, "derived", "total_inverter_power + total_grid_power"),
     }
 
