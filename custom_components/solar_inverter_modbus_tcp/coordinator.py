@@ -167,6 +167,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
         for key, high_key, low_key in (
             ("sw_fault", "r19", "r20"),
+            ("hw_fault", "r21", "r22"),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (48, 50)),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088)),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070)),
