@@ -30,7 +30,7 @@ class SolarSensorDescription(SensorEntityDescription):
 
 
 def d(name: str, data_key: str, scale: float = 1.0, unit: str | None = None, device_class: str | None = None, state_class: str | None = None, data_type: str = "uint16") -> SolarSensorDescription:
-    return SolarSensorDescription(key=data_key, name=name, data_key=data_key, scale=scale, signed=data_type == "int16", native_unit_of_measurement=unit, device_class=_DC.get(device_class) if device_class else None, state_class=_SC.get(state_class) if state_class else None)
+    return SolarSensorDescription(key=data_key, name=name, data_key=data_key, scale=scale, signed=data_type == "int16", native_unit_of_measurement=unit, device_class=_DC.get(device_class) if device_class else None, state_class=_SC.get(state_class) if state_class else None, suggested_display_precision=1 if data_key == "r46" else None)
 
 DESCRIPTION = [
     d("Work Status", "r0"), d("SW Fault", "sw_fault", data_type="uint32"),
@@ -121,7 +121,6 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_load_energy_today"
-        self._attr_device_info = _device_info(coordinator)
         self._baseline: float | None = None
         self._reset_date: str | None = None
 
@@ -133,26 +132,28 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
             self._reset_date = state.attributes.get("reset_date")
 
     @property
-    def extra_state_attributes(self) -> dict[str, object]:
-        return {"baseline_total": self._baseline, "reset_date": self._reset_date}
-
-    @property
-    def native_value(self) -> float | None:
-        total_raw = self.coordinator.data.get("r2056")
-        if total_raw is None:
+    def native_value(self) -> StateType:
+        total = self.coordinator.data.get("r2056")
+        if total is None:
             return None
-        total = int(total_raw) * 0.1
+        total = int(total) * 0.1
         today = dt_util.now().date().isoformat()
-        if self._baseline is None or self._reset_date != today:
+        if self._reset_date != today:
             self._baseline = total
             self._reset_date = today
-        self._baseline = min(self._baseline, total)
-        return round(max(0.0, total - self._baseline), 3)
+        if self._baseline is None:
+            self._baseline = total
+        return max(0.0, total - self._baseline)
+
+    @property
+    def extra_state_attributes(self):
+        return {"baseline_total": self._baseline, "reset_date": self._reset_date}
 
 
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
+    _attr_name = "EMS Mode"
     _attr_has_entity_name = True
-    _attr_name = "EMS Mode (4300)"
+    _attr_icon = "mdi:solar-power"
 
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
@@ -161,7 +162,7 @@ class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], Se
 
     @property
     def native_value(self) -> str | None:
-        value = self.coordinator.data.get("ems_mode")
+        value = self.coordinator.data.get("r4300")
         if value is None:
             return None
         return EMS_MODES.get(int(value), f"Unknown ({value})")
