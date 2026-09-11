@@ -36,9 +36,9 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         result = await unit.read_holding_registers(4300, 1)
                         if not result:
                             raise RuntimeError("empty response")
-                except Exception as err:
+                except Exception as err:  # noqa: BLE001
                     errors["base"] = "cannot_connect"
-                    _LOGGER.exception("Modbus FC03 register 4300 failed: %s", err)
+                    _LOGGER.exception("Modbus FC03 register 4300 failed")
                 else:
                     await self.async_set_unique_id(f"{host}:{port}:{unit_id}")
                     self._abort_if_unique_id_configured()
