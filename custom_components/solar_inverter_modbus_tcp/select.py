@@ -38,12 +38,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
     @property
     def extra_state_attributes(self):
-        return {
-            "modbus_function": "FC16",
-            "modbus_address": "4300",
-            "modbus_registers": "4300-4306",
-            "modbus_verify": "FC03 address=4300",
-        }
+        return {"modbus_address": 4300}
 
     @property
     def current_option(self) -> str | None:
