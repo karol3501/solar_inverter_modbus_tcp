@@ -34,7 +34,6 @@ def d(name: str, data_key: str, scale: float = 1.0, unit: str | None = None, dev
 
 DESCRIPTION = [
     d("Work Status", "r0"), d("SW Fault", "sw_fault", data_type="uint32"), d("HW Fault", "r21", data_type="uint32"),
-    d("PV Total Power", "r26", 1, "W", "power", "measurement"),
     d("PV1 Voltage", "r27", 0.1, "V", "voltage", "measurement"), d("PV1 Current", "r28", 0.01, "A", "current", "measurement", "int16"), d("PV1 Power", "r29", 1, "W", "power", "measurement"),
     d("PV2 Voltage", "r30", 0.1, "V", "voltage", "measurement"), d("PV2 Current", "r31", 0.01, "A", "current", "measurement", "int16"), d("PV2 Power", "r32", 1, "W", "power", "measurement"),
     d("PV3 Voltage", "r33", 0.1, "V", "voltage", "measurement"), d("PV3 Current", "r34", 0.01, "A", "current", "measurement", "int16"), d("PV3 Power", "r35", 1, "W", "power", "measurement"),
@@ -44,20 +43,26 @@ DESCRIPTION = [
     d("Grid Voltage L1", "r62", 0.1, "V", "voltage", "measurement"), d("Grid Voltage L2", "r63", 0.1, "V", "voltage", "measurement"), d("Grid Voltage L3", "r64", 0.1, "V", "voltage", "measurement"), d("Grid Frequency", "r66", 0.01, "Hz", None, "measurement"),
     d("Inverter Voltage L1", "r67", 0.1, "V", "voltage", "measurement"), d("Inverter Voltage L2", "r68", 0.1, "V", "voltage", "measurement"), d("Inverter Voltage L3", "r69", 0.1, "V", "voltage", "measurement"),
     d("Inverter Current L1", "r70", 0.01, "A", "current", "measurement", "int16"), d("Inverter Current L2", "r71", 0.01, "A", "current", "measurement", "int16"), d("Inverter Current L3", "r72", 0.01, "A", "current", "measurement", "int16"),
-    d("Inverter Active Power", "r73", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L1", "r74", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L2", "r75", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L3", "r76", 1, "W", "power", "measurement", "int16"),
+    d("Inverter Active Power L1", "r74", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L2", "r75", 1, "W", "power", "measurement", "int16"), d("Inverter Active Power L3", "r76", 1, "W", "power", "measurement", "int16"),
     d("Backup Voltage A", "r81", 0.1, "V", "voltage", "measurement"), d("Backup Voltage B", "r82", 0.1, "V", "voltage", "measurement"), d("Backup Voltage C", "r83", 0.1, "V", "voltage", "measurement"),
-    d("Backup Active Power", "r91", 1, "W", "power", "measurement", "int16"), d("Backup Active Power A", "r92", 1, "W", "power", "measurement", "int16"), d("Backup Active Power B", "r93", 1, "W", "power", "measurement", "int16"), d("Backup Active Power C", "r94", 1, "W", "power", "measurement", "int16"),
+    d("Backup Active Power A", "r92", 1, "W", "power", "measurement", "int16"), d("Backup Active Power B", "r93", 1, "W", "power", "measurement", "int16"), d("Backup Active Power C", "r94", 1, "W", "power", "measurement", "int16"),
     d("Inverter Temperature", "r113", 1, "°C", "temperature", "measurement", "int16"), d("Battery Temperature", "r114", 1, "°C", "temperature", "measurement", "int16"), d("Ambient Temperature", "r115", 1, "°C", "temperature", "measurement", "int16"),
     d("BMS Link Status", "r1022"), d("BMS Fault Code", "r1023"), d("Battery SOC", "r1025", 1, "%", "battery", "measurement"), d("Grid Meter Link Status", "r1046"), d("Grid Meter Voltage L1", "r1047", 0.1, "V", "voltage", "measurement"), d("Grid Meter Voltage L2", "r1048", 0.1, "V", "voltage", "measurement"), d("Grid Meter Voltage L3", "r1049", 0.1, "V", "voltage", "measurement"), d("DRM Status", "r1060"),
     d("Grid Active Power L1", "r1078", -1, "W", "power", "measurement", "int32"), d("Grid Active Power L2", "r1080", -1, "W", "power", "measurement", "int32"), d("Grid Active Power L3", "r1082", -1, "W", "power", "measurement", "int32"),
-    d("Grid Reactive Power L1", "r1084", 1, "var", None, "measurement", "int32"), d("Grid Reactive Power L2", "r1086", 1, "var", None, "measurement", "int32"), d("Grid Reactive Power L3", "r1088", 1, "var", None, "measurement", "int32"),
     d("Safety DSP FM Version", "r201"),
-    d("PV Total Energy", "r2000", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Battery Energy Total", "r2022", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Load Energy Total", "r2024", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Grid Energy Total", "r2026", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Battery Total Charge Energy", "r2028", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Battery Total Discharge Energy", "r2030", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Import Total", "r2040", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Export Total", "r2048", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Load Energy Use Total", "r2056", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From PV Total", "r2064", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From Battery Total", "r2066", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From Grid Total", "r2068", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Load Energy Total", "r2070", 0.1, "kWh", "energy", "total_increasing", "int32"),
+    d("PV Total Energy", "r2000", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Battery Energy Total", "r2022", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Load Energy Total", "r2024", 0.1, "kWh", "energy", "total_increasing", "int32"), d("PV To Grid Energy Total", "r2026", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Battery Total Charge Energy", "r2028", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Battery Total Discharge Energy", "r2030", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Import Total", "r2040", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Grid Energy Export Total", "r2048", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Load Energy Use Total", "r2056", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From PV Total", "r2064", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From Battery Total", "r2066", 0.1, "kWh", "energy", "total_increasing", "int32"), d("Energy From Grid Total", "r2068", 0.1, "kWh", "energy", "total_increasing", "int32"),
     d("PV Energy Today", "r2100", 0.1, "kWh", "energy", "total_increasing"), d("PV To Battery Energy Today", "r2111", 0.1, "kWh", "energy", "total_increasing"), d("PV To Load Energy Today", "r2112", 0.1, "kWh", "energy", "total_increasing"), d("PV To Grid Energy Today", "r2113", 0.1, "kWh", "energy", "total_increasing"), d("Battery Charge Energy Today", "r2114", 0.1, "kWh", "energy", "total_increasing"), d("Battery Discharge Energy Today", "r2115", 0.1, "kWh", "energy", "total_increasing"), d("Grid Energy Import Today", "r2120", 0.1, "kWh", "energy", "total_increasing"), d("Grid Energy Export Today", "r2124", 0.1, "kWh", "energy", "total_increasing"), d("Energy From PV Today", "r2132", 0.1, "kWh", "energy", "total_increasing"), d("Energy From Battery Today", "r2133", 0.1, "kWh", "energy", "total_increasing"), d("Energy From Grid Today", "r2134", 0.1, "kWh", "energy", "total_increasing"), d("Gen Energy Total Today", "r2135", 0.1, "kWh", "energy", "total_increasing"),
     d("EMS Mode Raw", "r4300"), d("Peak Meter Power", "r4447", 1, "W", "power", "measurement"), d("Peak Meter SOC Raw", "r4446"),
 ]
 
-DERIVED = [("work_status_text", "Work Status", None, None, None), ("total_pv_power", "Total PV Power", "W", "power", "measurement"), ("total_grid_power", "Total Grid Power", "W", "power", "measurement"), ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement"), ("load_power", "Load Power", "W", "power", "measurement")]
+DERIVED = [
+    ("work_status_text", "Work Status", None, None, None, ("Work Status",), "Decoded from Work Status"),
+    ("total_pv_power", "Total PV Power", "W", "power", "measurement", ("PV1 Power", "PV2 Power", "PV3 Power", "PV4 Power"), "PV1 + PV2 + PV3 + PV4"),
+    ("total_grid_power", "Total Grid Power", "W", "power", "measurement", ("Grid Active Power L1", "Grid Active Power L2", "Grid Active Power L3"), "L1 + L2 + L3"),
+    ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement", ("Inverter Active Power L1", "Inverter Active Power L2", "Inverter Active Power L3"), "L1 + L2 + L3"),
+    ("backup_active_power", "Backup Active Power", "W", "power", "measurement", ("Backup Active Power A", "Backup Active Power B", "Backup Active Power C"), "A + B + C"),
+    ("load_power", "Load Power", "W", "power", "measurement", ("Total Inverter Power", "Total Grid Power"), "abs(abs(Total Inverter Power) - abs(Total Grid Power))"),
+]
 
 
 def _device_info(coordinator: SolarInverterCoordinator) -> DeviceInfo:
@@ -102,9 +107,11 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
 
 
 class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
-    def __init__(self, coordinator: SolarInverterCoordinator, data_key: str, name: str, unit: str | None, device_class: str | None, state_class: str | None) -> None:
+    def __init__(self, coordinator: SolarInverterCoordinator, data_key: str, name: str, unit: str | None, device_class: str | None, state_class: str | None, source_sensors: tuple[str, ...], calculation: str) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
+        self._source_sensors = source_sensors
+        self._calculation = calculation
         self._attr_name = name
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{data_key}"
         self._attr_has_entity_name = True
@@ -116,6 +123,14 @@ class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnti
     @property
     def native_value(self) -> StateType:
         return self.coordinator.data.get(self._data_key)
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "calculated": True,
+            "source_sensors": list(self._source_sensors),
+            "calculation": self._calculation,
+        }
 
 
 class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity, RestoreEntity):
