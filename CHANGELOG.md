@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.8
+
+### Fixed
+- Fixed **Load Energy Today** device association so the calculated sensor appears under the Solar Inverter device.
+- Kept **Load Energy Today** calculated from **Load Energy Use Total** (`r2056`).
+- Added source information to the Load Energy Today attributes.
+
 ## 0.9.7
 
 ### Fixed
