@@ -1,17 +1,22 @@
 # Changelog
 
-## 0.9.8
-
-### Fixed
-- Fixed **Load Energy Today** device association so the calculated sensor appears under the Solar Inverter device.
-- Kept **Load Energy Today** calculated from **Load Energy Use Total** (`r2056`).
-- Added source information to the Load Energy Today attributes.
-
 ## 0.9.7
 
-### Fixed
-- Fixed Load Power calculation for positive and negative Total Inverter Power and Total Grid Power by using the absolute value of their signed sum.
-- Kept Load Energy Today based on Load Energy Use Total (`r2056`).
+### Changed
+- Fixed Load Power calculation for positive and negative Total Inverter Power and Total Grid Power by using `abs(Total Inverter Power + Total Grid Power)`.
+- Kept Load Energy Today as a calculated sensor based on Load Energy Use Total (`r2056`).
+- Converted Total PV Power to a calculated sensor based on PV1-PV4 Power (`r29`, `r32`, `r35`, `r38`).
+- Converted Total Grid Power to a calculated sensor based on Grid Active Power L1-L3 (`r1078`, `r1080`, `r1082`).
+- Converted Total Inverter Power to a calculated sensor based on Inverter Active Power L1-L3 (`r74`, `r75`, `r76`).
+- Converted Backup Active Power to a calculated sensor based on Backup Active Power A-C (`r92`, `r93`, `r94`).
+- Calculated sensors now expose only `calculated` and `source_sensors` as custom attributes.
+- Direct Modbus sensors now expose only `modbus_address` as their Modbus custom attribute.
+- Removed Modbus function/register metadata from all sensor attributes.
+
+### Removed
+- Removed Load Energy Total (`r2070`).
+- Removed Grid Reactive Power L1-L3 (`r1084`, `r1086`, `r1088`).
+- Removed direct Modbus entities for Total PV Power (`r26`), Inverter Active Power (`r73`), and Backup Active Power (`r91`); their values are calculated from phase/channel sensors.
 
 ## 0.9.6
 
