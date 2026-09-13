@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.6
+
+### Changed
+- Converted Total PV Power to a calculated sensor based on PV1-PV4 Power (`r29`, `r32`, `r35`, `r38`).
+- Converted Total Inverter Power to a calculated sensor based on Inverter Active Power L1-L3 (`r74`, `r75`, `r76`).
+- Converted Backup Active Power to a calculated sensor based on Backup Active Power A-C (`r92`, `r93`, `r94`).
+- Added calculated-sensor attributes describing source sensors and the calculation used.
+- Calculated sensors no longer expose Modbus address/function metadata because they are not direct Modbus sensors.
+
+### Removed
+- Removed Load Energy Total (`r2070`).
+- Removed Grid Reactive Power L1-L3 (`r1084`, `r1086`, `r1088`).
+- Removed direct Modbus entities for Total PV Power (`r26`), Inverter Active Power (`r73`), and Backup Active Power (`r91`); their values are now calculated from phase/channel sensors.
+
 ## 0.9.5
 
 ### Fixed
