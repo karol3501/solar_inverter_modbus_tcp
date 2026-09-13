@@ -162,16 +162,23 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             if high_key in data and low_key in data:
                 data[key] = _i32(data[high_key], data[low_key])
 
-        if "r0" in data:
-            data["work_status_text"] = {0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising", 4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery", 8: "Generator Mode", 9: "Island Mode"}.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
+        # The inverter's aggregate power registers are not reliable on all models.
+        # Derive the aggregate values from the phase registers instead.
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
-        if all(f"r{x}" in data for x in (1078, 1080, 1082)):
-            data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
+            data["r26"] = data["total_pv_power"]
         if all(f"r{x}" in data for x in (74, 75, 76)):
             data["total_inverter_power"] = sum(_i16(int(data[f"r{x}"])) for x in (74, 75, 76))
+            data["r73"] = data["total_inverter_power"]
+        if all(f"r{x}" in data for x in (92, 93, 94)):
+            data["backup_active_power"] = sum(_i16(int(data[f"r{x}"])) for x in (92, 93, 94))
+            data["r91"] = data["backup_active_power"]
+        if all(f"r{x}" in data for x in (1078, 1080, 1082)):
+            data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
         if "total_inverter_power" in data and "total_grid_power" in data:
             data["load_power"] = abs(abs(int(data["total_inverter_power"])) - abs(int(data["total_grid_power"])))
+        if "r0" in data:
+            data["work_status_text"] = {0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising", 4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery", 8: "Generator Mode", 9: "Island Mode"}.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
         if "r4300" in data:
             data["ems_mode"] = int(data["r4300"])
         if "r4446" in data:
