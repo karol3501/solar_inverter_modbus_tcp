@@ -176,7 +176,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         if all(f"r{x}" in data for x in (1078, 1080, 1082)):
             data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
         if "total_inverter_power" in data and "total_grid_power" in data:
-            data["load_power"] = abs(abs(int(data["total_inverter_power"])) - abs(int(data["total_grid_power"])))
+            data["load_power"] = abs(int(data["total_inverter_power"]) + int(data["total_grid_power"]))
         if "r0" in data:
             data["work_status_text"] = {0: "Initialising", 1: "Standby", 2: "Grid Check", 3: "Initialising", 4: "Fault", 5: "Grid Off", 6: "Bypass", 7: "PV Charging Battery", 8: "Generator Mode", 9: "Island Mode"}.get(int(data["r0"]), f"Unknown ({int(data['r0'])})")
         if "r4300" in data:
