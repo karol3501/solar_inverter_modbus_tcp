@@ -12,6 +12,7 @@ from .const import (
     CONF_DEBUG_LOGGING,
     CONF_ENABLE_EV_CHARGER,
     CONF_ENABLE_GENERATOR,
+    CONF_EV_CHARGERS,
     CONF_SCAN_INTERVAL,
     CONF_UNIT_ID,
 )
@@ -24,6 +25,7 @@ PLATFORMS = ["sensor", "select", "number"]
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     params = ModbusTcpParams(host=entry.data[CONF_HOST], port=entry.data[CONF_PORT])
     unit = async_get_unit(hass, entry, params, entry.data[CONF_UNIT_ID])
+    detected_ev_chargers = entry.options.get(CONF_EV_CHARGERS)
     coordinator = SolarInverterCoordinator(
         hass,
         unit,
@@ -32,6 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         debug_logging=entry.options.get(CONF_DEBUG_LOGGING, False),
         enable_generator=entry.options.get(CONF_ENABLE_GENERATOR, False),
         enable_ev_charger=entry.options.get(CONF_ENABLE_EV_CHARGER, False),
+        ev_chargers=detected_ev_chargers,
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
