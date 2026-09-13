@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -13,6 +14,7 @@ from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+_INTER_REQUEST_DELAY = 0.25
 
 
 def _device_info() -> DeviceInfo:
@@ -62,6 +64,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
         requested = max(10, min(100, int(value)))
 
         async with self.coordinator.modbus_lock:
+            await asyncio.sleep(_INTER_REQUEST_DELAY)
             started = time.monotonic()
             current_value = self.coordinator.data.get("r4446")
             if current_value is None:
@@ -88,8 +91,13 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
 
             try:
                 await self.coordinator.unit.write_register(4446, raw)
-            except Exception as err:
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
+            except Exception as err:  # noqa: BLE001
                 _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
+                try:
+                    await self.coordinator.unit.disconnect()
+                except Exception as disconnect_err:  # noqa: BLE001
+                    _LOGGER.debug("MODBUS DISCONNECT FAILED AFTER PEAK SHAVING WRITE | error=%s", disconnect_err)
                 raise
 
             if self.coordinator.debug_logging:
