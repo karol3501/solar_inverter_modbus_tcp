@@ -31,9 +31,28 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         params = ModbusTcpParams(host=host, port=port)
         detected: list[int] = []
         async with async_get_temporary_unit(self.hass, params, unit_id) as unit:
-            for charger, address in ((1, 3200), (2, 3250)):
-                values = await unit.read_input_registers(address, 1)
-                if values and int(values[0]) == 1:
+            for charger, base_address in ((1, 3200), (2, 3250)):
+                try:
+                    status = await unit.read_input_registers(base_address, 1)
+                    address = await unit.read_input_registers(base_address + 1, 1)
+                    serial = await unit.read_input_registers(base_address + 2, 4)
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "EV charger %s is not available at Modbus block %s: %s",
+                        charger,
+                        base_address,
+                        err,
+                    )
+                    continue
+
+                if (
+                    status
+                    and int(status[0]) == 1
+                    and address
+                    and 1 <= int(address[0]) <= 247
+                    and serial
+                    and any(int(value) != 0 for value in serial)
+                ):
                     detected.append(charger)
         return detected
 
@@ -90,7 +109,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             detected = await self._detect_ev_chargers(host, port, unit_id)
                         except Exception as err:  # noqa: BLE001
                             _LOGGER.warning("Unable to detect EV chargers: %s", err)
-                            errors["ev_detection_failed"] = "ev_detection_failed"
+                            errors["base"] = "ev_detection_failed"
                         else:
                             self._pending_entry_options = options
                             self._pending_entry_data = {
@@ -99,6 +118,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 CONF_UNIT_ID: unit_id,
                             }
                             self._pending_ev_chargers = detected
+                            self._pending_reconfigure = False
                             return self.async_show_form(
                                 step_id="ev_detection",
                                 data_schema=vol.Schema({}),
@@ -130,6 +150,12 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_ev_detection(self, user_input=None) -> FlowResult:
         options = self._pending_entry_options
         options[CONF_EV_CHARGERS] = self._pending_ev_chargers
+        if self._pending_reconfigure:
+            return self.async_update_reload_and_abort(
+                self._pending_reconfigure_entry,
+                data_updates=self._pending_entry_data,
+                options_updates=options,
+            )
         return self.async_create_entry(
             title=f"Solar Inverter ({self._pending_entry_data[CONF_HOST]})",
             data=self._pending_entry_data,
@@ -139,6 +165,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reconfigure(self, user_input=None) -> FlowResult:
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
+        current_options = entry.options
 
         if user_input is not None:
             host = user_input[CONF_HOST].strip()
@@ -170,16 +197,51 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         err,
                     )
                 else:
-                    return self.async_update_reload_and_abort(
-                        entry,
-                        data_updates={CONF_HOST: host, CONF_PORT: port, CONF_UNIT_ID: unit_id},
-                    )
+                    options = {
+                        CONF_SCAN_INTERVAL: int(user_input.get(CONF_SCAN_INTERVAL, current_options.get(CONF_SCAN_INTERVAL, 10))),
+                        CONF_DEBUG_LOGGING: bool(user_input.get(CONF_DEBUG_LOGGING, current_options.get(CONF_DEBUG_LOGGING, False))),
+                        CONF_ENABLE_GENERATOR: bool(user_input.get(CONF_ENABLE_GENERATOR, current_options.get(CONF_ENABLE_GENERATOR, False))),
+                        CONF_ENABLE_EV_CHARGER: bool(user_input.get(CONF_ENABLE_EV_CHARGER, current_options.get(CONF_ENABLE_EV_CHARGER, False))),
+                        CONF_EV_CHARGERS: [],
+                    }
+                    data_updates = {
+                        CONF_HOST: host,
+                        CONF_PORT: port,
+                        CONF_UNIT_ID: unit_id,
+                    }
+                    if options[CONF_ENABLE_EV_CHARGER]:
+                        try:
+                            detected = await self._detect_ev_chargers(host, port, unit_id)
+                        except Exception as err:  # noqa: BLE001
+                            _LOGGER.warning("Unable to detect EV chargers during reconfigure: %s", err)
+                            errors["base"] = "ev_detection_failed"
+                        else:
+                            self._pending_entry_options = options
+                            self._pending_entry_data = data_updates
+                            self._pending_ev_chargers = detected
+                            self._pending_reconfigure = True
+                            self._pending_reconfigure_entry = entry
+                            return self.async_show_form(
+                                step_id="ev_detection",
+                                data_schema=vol.Schema({}),
+                                description_placeholders=self._ev_detection_placeholders(detected),
+                            )
+                    else:
+                        return self.async_update_reload_and_abort(
+                            entry,
+                            data_updates=data_updates,
+                            options_updates=options,
+                        )
 
         schema = vol.Schema(
             {
                 vol.Required(CONF_HOST, default=entry.data.get(CONF_HOST, "")): str,
                 vol.Required(CONF_PORT, default=entry.data.get(CONF_PORT, DEFAULT_PORT)): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Required(CONF_UNIT_ID, default=str(entry.data.get(CONF_UNIT_ID, DEFAULT_UNIT_ID))): str,
+                vol.Optional(CONF_DEBUG_LOGGING, default=current_options.get(CONF_DEBUG_LOGGING, False)): bool,
+                vol.Optional(CONF_SCAN_INTERVAL, default=current_options.get(CONF_SCAN_INTERVAL, 10)): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
+                vol.Optional(CONF_ENABLE_GENERATOR, default=current_options.get(CONF_ENABLE_GENERATOR, False)): bool,
+                vol.Optional(CONF_ENABLE_EV_CHARGER, default=current_options.get(CONF_ENABLE_EV_CHARGER, False)): bool,
             }
         )
         return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors)
@@ -202,9 +264,28 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
         async with async_get_temporary_unit(
             self.hass, params, self.config_entry.data[CONF_UNIT_ID]
         ) as unit:
-            for charger, address in ((1, 3200), (2, 3250)):
-                values = await unit.read_input_registers(address, 1)
-                if values and int(values[0]) == 1:
+            for charger, base_address in ((1, 3200), (2, 3250)):
+                try:
+                    status = await unit.read_input_registers(base_address, 1)
+                    address = await unit.read_input_registers(base_address + 1, 1)
+                    serial = await unit.read_input_registers(base_address + 2, 4)
+                except Exception as err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "EV charger %s is not available at Modbus block %s: %s",
+                        charger,
+                        base_address,
+                        err,
+                    )
+                    continue
+
+                if (
+                    status
+                    and int(status[0]) == 1
+                    and address
+                    and 1 <= int(address[0]) <= 247
+                    and serial
+                    and any(int(value) != 0 for value in serial)
+                ):
                     detected.append(charger)
         return detected
 
