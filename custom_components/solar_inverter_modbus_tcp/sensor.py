@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.sensor import SensorDeviceClass
-from homeassistant.components.sensor import SensorEntity
-from homeassistant.components.sensor import SensorEntityDescription
-from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components import sensor
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -17,12 +14,12 @@ from homeassistant.util import dt as dt_util
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
 
-_DC = {"voltage": SensorDeviceClass.VOLTAGE, "current": SensorDeviceClass.CURRENT, "power": SensorDeviceClass.POWER, "temperature": SensorDeviceClass.TEMPERATURE, "battery": SensorDeviceClass.BATTERY, "energy": SensorDeviceClass.ENERGY}
-_SC = {"measurement": SensorStateClass.MEASUREMENT, "total_increasing": SensorStateClass.TOTAL_INCREASING}
+_DC = {"voltage": sensor.SensorDeviceClass.VOLTAGE, "current": sensor.SensorDeviceClass.CURRENT, "power": sensor.SensorDeviceClass.POWER, "temperature": sensor.SensorDeviceClass.TEMPERATURE, "battery": sensor.SensorDeviceClass.BATTERY, "energy": sensor.SensorDeviceClass.ENERGY}
+_SC = {"measurement": sensor.SensorStateClass.MEASUREMENT, "total_increasing": sensor.SensorStateClass.TOTAL_INCREASING}
 
 
 @dataclass(frozen=True, kw_only=True)
-class SolarSensorDescription(SensorEntityDescription):
+class SolarSensorDescription(sensor.SensorEntityDescription):
     data_key: str
     scale: float = 1.0
     signed: bool = False
@@ -76,14 +73,14 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             descriptions.extend(EV_CHARGER_1_DESCRIPTION)
         if 2 in coordinator.ev_chargers:
             descriptions.extend(EV_CHARGER_2_DESCRIPTION)
-    entities: list[SensorEntity] = [SolarInverterSensor(coordinator, description) for description in descriptions]
+    entities: list[sensor.SensorEntity] = [SolarInverterSensor(coordinator, description) for description in descriptions]
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
     entities.append(SolarInverterEmsModeSensor(coordinator))
     async_add_entities(entities)
 
 
-class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
+class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
     def __init__(self, coordinator: SolarInverterCoordinator, description: SolarSensorDescription) -> None:
         super().__init__(coordinator)
         self.entity_description = description
@@ -115,7 +112,7 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
         return {"modbus_address": self.entity_description.modbus_address}
 
 
-class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
+class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
     def __init__(self, coordinator: SolarInverterCoordinator, data_key: str, name: str, unit: str | None, device_class: str | None, state_class: str | None, source_sensors: tuple[str, ...]) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
@@ -137,12 +134,12 @@ class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnti
         return {"calculated": True, "source_sensors": list(self._source_sensors)}
 
 
-class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity, RestoreEntity):
+class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity, RestoreEntity):
     _attr_name = "Load Energy Today"
     _attr_has_entity_name = True
     _attr_native_unit_of_measurement = "kWh"
-    _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_device_class = sensor.SensorDeviceClass.ENERGY
+    _attr_state_class = sensor.SensorStateClass.TOTAL_INCREASING
 
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
@@ -177,7 +174,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
         return {"calculated": True, "source_sensors": ["Load Energy Use Total"]}
 
 
-class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
+class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
     _attr_name = "EMS Mode"
     _attr_has_entity_name = True
 
