@@ -4,6 +4,8 @@ DEFAULT_UNIT_ID = 1
 CONF_UNIT_ID = "unit_id"
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_DEBUG_LOGGING = "debug_logging"
+CONF_ENABLE_GENERATOR = "enable_generator"
+CONF_ENABLE_EV_CHARGER = "enable_ev_charger"
 
 EMS_MODES = {
     0: "Self-Use",
