@@ -12,7 +12,6 @@
 - Removed the raw Work Status entity; register `r0` is used internally for the calculated human-readable Work Status entity.
 - Removed the duplicate base Generator Energy Today entity so generator energy is only exposed when Generator telemetry is enabled.
 - Kept Generator and EV Charger telemetry conditional on their configuration options.
-- Simplified sensor imports without changing entity behavior.
 
 ### Removed
 - Removed the obsolete Grid Reactive Power registers from polling and decoding.
