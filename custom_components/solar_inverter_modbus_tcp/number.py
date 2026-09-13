@@ -49,9 +49,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
     @property
     def extra_state_attributes(self):
         return {
-            "modbus_function": "FC06",
-            "modbus_address": "4446",
-            "modbus_registers": "4446-4446",
+            "modbus_address": 4446,
             "modbus_role": "high byte" if self._high_byte else "low byte",
         }
 
