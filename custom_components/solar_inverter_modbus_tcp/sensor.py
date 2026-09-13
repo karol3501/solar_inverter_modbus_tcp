@@ -2,12 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorEntityDescription,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -39,7 +34,7 @@ def d(name: str, data_key: str, scale: float = 1.0, unit: str | None = None, dev
 
 
 DESCRIPTION = [
-    d("SW Fault", "sw_fault", data_type="uint32", modbus_address=19), d("HW Fault", "r21", data_type="uint32"),
+    d("Work Status", "r0"), d("SW Fault", "sw_fault", data_type="uint32", modbus_address=19), d("HW Fault", "r21", data_type="uint32"),
     d("PV1 Voltage", "r27", 0.1, "V", "voltage", "measurement"), d("PV1 Current", "r28", 0.01, "A", "current", "measurement", "int16"), d("PV1 Power", "r29", 1, "W", "power", "measurement"),
     d("PV2 Voltage", "r30", 0.1, "V", "voltage", "measurement"), d("PV2 Current", "r31", 0.01, "A", "current", "measurement", "int16"), d("PV2 Power", "r32", 1, "W", "power", "measurement"),
     d("PV3 Voltage", "r33", 0.1, "V", "voltage", "measurement"), d("PV3 Current", "r34", 0.01, "A", "current", "measurement", "int16"), d("PV3 Power", "r35", 1, "W", "power", "measurement"),
@@ -78,7 +73,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             descriptions.extend(EV_CHARGER_1_DESCRIPTION)
         if 2 in coordinator.ev_chargers:
             descriptions.extend(EV_CHARGER_2_DESCRIPTION)
-
     entities: list[SensorEntity] = [SolarInverterSensor(coordinator, description) for description in descriptions]
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
@@ -105,8 +99,7 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
             values = [self.coordinator.data.get(f"r{int(self.entity_description.data_key[1:]) + offset}") for offset in range(4)]
             if any(item is None for item in values):
                 return None
-            value = (int(values[0]) << 48) | (int(values[1]) << 32) | (int(values[2]) << 16) | int(values[3])
-            return value * self.entity_description.scale
+            return (int(values[0]) << 48) | (int(values[1]) << 32) | (int(values[2]) << 16) | int(values[3])
         value = int(value)
         if self.entity_description.signed and value & 0x8000:
             value -= 0x10000
@@ -184,7 +177,6 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
     _attr_name = "EMS Mode"
     _attr_has_entity_name = True
-    _attr_device_class = None
 
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
