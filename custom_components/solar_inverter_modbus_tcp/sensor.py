@@ -143,6 +143,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_load_energy_today"
+        self._attr_device_info = _device_info(coordinator)
         self._baseline: float | None = None
         self._reset_date: str | None = None
 
@@ -169,7 +170,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
 
     @property
     def extra_state_attributes(self):
-        return {"baseline_total": self._baseline, "reset_date": self._reset_date}
+        return {"baseline_total": self._baseline, "reset_date": self._reset_date, "source_sensor": "Load Energy Use Total", "source_register": "r2056"}
 
 
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
