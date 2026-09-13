@@ -6,6 +6,7 @@ CONF_SCAN_INTERVAL = "scan_interval"
 CONF_DEBUG_LOGGING = "debug_logging"
 CONF_ENABLE_GENERATOR = "enable_generator"
 CONF_ENABLE_EV_CHARGER = "enable_ev_charger"
+CONF_EV_CHARGERS = "ev_chargers"
 
 EMS_MODES = {
     0: "Self-Use",
