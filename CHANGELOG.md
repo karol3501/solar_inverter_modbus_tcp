@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5
+
+### Fixed
+- Fixed Ruff `RUF100` validation in the Peak Shaving Modbus recovery handler.
+
 ## 0.9.4
 
 ### Fixed
