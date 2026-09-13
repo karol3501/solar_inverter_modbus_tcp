@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.10
+
+### Changed
+- Removed the obsolete debug attribute patching module and its startup hook.
+- Standardized Peak Shaving number entity attributes to remove Modbus function and register-range metadata.
+- Standardized EMS Mode Control attributes to remove Modbus function, register-range, and verification metadata.
+- Removed unused Grid Reactive Power registers (`r1084`, `r1086`, `r1088`) from polling and 32-bit decoding.
+- Removed obsolete `r2070` Load Energy Total polling and decoding because the entity was already removed.
+- Removed obsolete internal aliases for direct aggregate registers `r26`, `r73`, and `r91`.
+
+### Removed
+- Removed obsolete `debug_attributes.py`.
+- Removed duplicate `brand/icon1.png`.
+- Removed Grid Reactive Power L1-L3 (`r1084`, `r1086`, `r1088`) from Modbus polling.
+
 ## 0.9.9
 
 ### Changed
