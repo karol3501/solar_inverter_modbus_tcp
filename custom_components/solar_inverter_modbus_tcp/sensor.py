@@ -22,18 +22,23 @@ from .coordinator import SolarInverterCoordinator
 _DC = {"voltage": SensorDeviceClass.VOLTAGE, "current": SensorDeviceClass.CURRENT, "power": SensorDeviceClass.POWER, "temperature": SensorDeviceClass.TEMPERATURE, "battery": SensorDeviceClass.BATTERY, "energy": SensorDeviceClass.ENERGY}
 _SC = {"measurement": SensorStateClass.MEASUREMENT, "total_increasing": SensorStateClass.TOTAL_INCREASING}
 
+
 @dataclass(frozen=True, kw_only=True)
 class SolarSensorDescription(SensorEntityDescription):
     data_key: str
     scale: float = 1.0
     signed: bool = False
+    modbus_address: int | None = None
 
 
-def d(name: str, data_key: str, scale: float = 1.0, unit: str | None = None, device_class: str | None = None, state_class: str | None = None, data_type: str = "uint16") -> SolarSensorDescription:
-    return SolarSensorDescription(key=data_key, name=name, data_key=data_key, scale=scale, signed=data_type == "int16", native_unit_of_measurement=unit, device_class=_DC.get(device_class) if device_class else None, state_class=_SC.get(state_class) if state_class else None, suggested_display_precision=1 if data_key == "r46" else None)
+def d(name: str, data_key: str, scale: float = 1.0, unit: str | None = None, device_class: str | None = None, state_class: str | None = None, data_type: str = "uint16", modbus_address: int | None = None) -> SolarSensorDescription:
+    if modbus_address is None and data_key.startswith("r"):
+        modbus_address = int(data_key[1:])
+    return SolarSensorDescription(key=data_key, name=name, data_key=data_key, scale=scale, signed=data_type == "int16", modbus_address=modbus_address, native_unit_of_measurement=unit, device_class=_DC.get(device_class) if device_class else None, state_class=_SC.get(state_class) if state_class else None, suggested_display_precision=1 if data_key == "r46" else None)
+
 
 DESCRIPTION = [
-    d("Work Status", "r0"), d("SW Fault", "sw_fault", data_type="uint32"), d("HW Fault", "r21", data_type="uint32"),
+    d("Work Status", "r0"), d("SW Fault", "sw_fault", data_type="uint32", modbus_address=19), d("HW Fault", "r21", data_type="uint32"),
     d("PV1 Voltage", "r27", 0.1, "V", "voltage", "measurement"), d("PV1 Current", "r28", 0.01, "A", "current", "measurement", "int16"), d("PV1 Power", "r29", 1, "W", "power", "measurement"),
     d("PV2 Voltage", "r30", 0.1, "V", "voltage", "measurement"), d("PV2 Current", "r31", 0.01, "A", "current", "measurement", "int16"), d("PV2 Power", "r32", 1, "W", "power", "measurement"),
     d("PV3 Voltage", "r33", 0.1, "V", "voltage", "measurement"), d("PV3 Current", "r34", 0.01, "A", "current", "measurement", "int16"), d("PV3 Power", "r35", 1, "W", "power", "measurement"),
@@ -56,12 +61,12 @@ DESCRIPTION = [
 ]
 
 DERIVED = [
-    ("work_status_text", "Work Status", None, None, None, ("Work Status",), "Decoded from Work Status"),
-    ("total_pv_power", "Total PV Power", "W", "power", "measurement", ("PV1 Power", "PV2 Power", "PV3 Power", "PV4 Power"), "PV1 + PV2 + PV3 + PV4"),
-    ("total_grid_power", "Total Grid Power", "W", "power", "measurement", ("Grid Active Power L1", "Grid Active Power L2", "Grid Active Power L3"), "L1 + L2 + L3"),
-    ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement", ("Inverter Active Power L1", "Inverter Active Power L2", "Inverter Active Power L3"), "L1 + L2 + L3"),
-    ("backup_active_power", "Backup Active Power", "W", "power", "measurement", ("Backup Active Power A", "Backup Active Power B", "Backup Active Power C"), "A + B + C"),
-    ("load_power", "Load Power", "W", "power", "measurement", ("Total Inverter Power", "Total Grid Power"), "abs(abs(Total Inverter Power) - abs(Total Grid Power))"),
+    ("work_status_text", "Work Status", None, None, None, ("Work Status",)),
+    ("total_pv_power", "Total PV Power", "W", "power", "measurement", ("PV1 Power", "PV2 Power", "PV3 Power", "PV4 Power")),
+    ("total_grid_power", "Total Grid Power", "W", "power", "measurement", ("Grid Active Power L1", "Grid Active Power L2", "Grid Active Power L3")),
+    ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement", ("Inverter Active Power L1", "Inverter Active Power L2", "Inverter Active Power L3")),
+    ("backup_active_power", "Backup Active Power", "W", "power", "measurement", ("Backup Active Power A", "Backup Active Power B", "Backup Active Power C")),
+    ("load_power", "Load Power", "W", "power", "measurement", ("Total Inverter Power", "Total Grid Power")),
 ]
 
 
@@ -100,18 +105,16 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnt
 
     @property
     def extra_state_attributes(self):
-        if self.entity_description.data_key == "r1023":
-            value = self.coordinator.data.get("r1023")
-            return {"raw_code": int(value)} if value is not None else {"raw_code": None}
-        return None
+        if self.entity_description.modbus_address is None:
+            return None
+        return {"modbus_address": self.entity_description.modbus_address}
 
 
 class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
-    def __init__(self, coordinator: SolarInverterCoordinator, data_key: str, name: str, unit: str | None, device_class: str | None, state_class: str | None, source_sensors: tuple[str, ...], calculation: str) -> None:
+    def __init__(self, coordinator: SolarInverterCoordinator, data_key: str, name: str, unit: str | None, device_class: str | None, state_class: str | None, source_sensors: tuple[str, ...]) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
         self._source_sensors = source_sensors
-        self._calculation = calculation
         self._attr_name = name
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{data_key}"
         self._attr_has_entity_name = True
@@ -126,11 +129,7 @@ class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEnti
 
     @property
     def extra_state_attributes(self):
-        return {
-            "calculated": True,
-            "source_sensors": list(self._source_sensors),
-            "calculation": self._calculation,
-        }
+        return {"calculated": True, "source_sensors": list(self._source_sensors)}
 
 
 class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity, RestoreEntity):
@@ -170,7 +169,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], Se
 
     @property
     def extra_state_attributes(self):
-        return {"baseline_total": self._baseline, "reset_date": self._reset_date, "source_sensor": "Load Energy Use Total", "source_register": "r2056"}
+        return {"calculated": True, "source_sensors": ["Load Energy Use Total"]}
 
 
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], SensorEntity):
