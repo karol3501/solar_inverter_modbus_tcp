@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4
+
+### Fixed
+- Added a 250 ms gap between Modbus transactions to match the previous working communication pacing and avoid overloading the inverter TCP endpoint.
+- Recycle the shared Modbus connection after timeout/connection-loss errors so the next request can establish a fresh TCP connection.
+- Stop the current polling cycle after a connection-level failure instead of sending the remaining requests into a wedged connection.
+- Added the same pacing and connection recovery to Peak Shaving FC06 writes on register `4446`.
+
 ## 0.9.3
 
 ### Fixed
