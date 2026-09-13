@@ -15,6 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _READ_RETRIES = 2
 _RETRY_DELAY = 0.5
+_INTER_REQUEST_DELAY = 0.25
 
 
 def _i16(value: int) -> int:
@@ -34,6 +35,11 @@ def _u32(hi: int, lo: int) -> int:
 def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
     for offset, value in enumerate(values):
         data[f"r{start + offset}"] = int(value)
+
+
+def _is_connection_error(error: Exception) -> bool:
+    text = str(error).lower()
+    return "timeout" in text or "connection lost" in text or "connection" in text
 
 
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
@@ -66,10 +72,16 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                     raise UpdateFailed(f"{function} read {address}-{end} returned {len(values)} registers, expected {count}")
                 result = [int(value) for value in values]
                 self._debug("MODBUS RESPONSE | %s | range=%s-%s | registers=%s | duration=%.3fs | values=%s", function, address, end, len(result), time.monotonic() - started, result)
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
                 return result
             except Exception as err:  # noqa: BLE001
                 last_error = err
                 duration = time.monotonic() - started
+                if _is_connection_error(err):
+                    try:
+                        await self.unit.disconnect()
+                    except Exception as disconnect_err:  # noqa: BLE001
+                        _LOGGER.debug("MODBUS DISCONNECT FAILED | error=%s", disconnect_err)
                 if attempt < _READ_RETRIES:
                     _LOGGER.warning("MODBUS READ RETRY | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s | duration=%.3fs | error=%s", function, address, count, address, end, attempt, _READ_RETRIES, duration, err)
                     await asyncio.sleep(_RETRY_DELAY)
@@ -118,6 +130,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self._successful_requests = 0
         self._failed_requests = 0
 
+        connection_failed = False
         for function, blocks in (("FC04", input_blocks), ("FC03", holding_blocks)):
             for address, count in blocks:
                 try:
@@ -126,7 +139,13 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                     self._successful_requests += 1
                 except Exception as err:  # noqa: BLE001
                     self._failed_requests += 1
+                    connection_failed = _is_connection_error(err)
                     _LOGGER.warning("MODBUS BLOCK SKIPPED | %s | address=%s | range=%s-%s | using last good data | error=%s", function, address, address, address + count - 1, err)
+                    if connection_failed:
+                        _LOGGER.warning("MODBUS CONNECTION RECOVERY | stopping current poll after failed %s request; next poll will reconnect", function)
+                        break
+            if connection_failed:
+                break
 
         if self._successful_requests == 0:
             raise UpdateFailed(f"Modbus telemetry update failed: all {total_requests} requests failed")
