@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.0
+
+### Added
+- Added optional Generator telemetry with all documented generator voltage, current, active power, and daily energy entities.
+- Added optional EV Charger telemetry for EV Charger 1 and EV Charger 2 using the documented charger register blocks.
+- Added automatic EV charger detection when EV chargers are enabled; only detected chargers create entities and their register blocks are polled.
+- Added EV charger detection information during initial configuration.
+
+### Changed
+- Removed the raw Work Status entity; register `r0` is used internally for the calculated human-readable Work Status entity.
+- Removed the duplicate base Generator Energy Today entity so generator energy is only exposed when Generator telemetry is enabled.
+- Kept Generator and EV Charger telemetry conditional on their configuration options.
+
+### Removed
+- Removed the obsolete Grid Reactive Power registers from polling and decoding.
+- Removed obsolete Modbus function/register/source attributes from entity state attributes.
+
 ## 0.9.10
 
 ### Changed
