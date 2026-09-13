@@ -8,7 +8,13 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from modbus_connection import ModbusTcpParams
 
-from .const import CONF_DEBUG_LOGGING, CONF_SCAN_INTERVAL, CONF_UNIT_ID
+from .const import (
+    CONF_DEBUG_LOGGING,
+    CONF_ENABLE_EV_CHARGER,
+    CONF_ENABLE_GENERATOR,
+    CONF_SCAN_INTERVAL,
+    CONF_UNIT_ID,
+)
 from .coordinator import SolarInverterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,6 +30,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.entry_id,
         update_interval=entry.options.get(CONF_SCAN_INTERVAL, 10),
         debug_logging=entry.options.get(CONF_DEBUG_LOGGING, False),
+        enable_generator=entry.options.get(CONF_ENABLE_GENERATOR, False),
+        enable_ev_charger=entry.options.get(CONF_ENABLE_EV_CHARGER, False),
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
