@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.7
+
+### Fixed
+- Fixed Load Power calculation for positive and negative Total Inverter Power and Total Grid Power by using the absolute value of their signed sum.
+- Kept Load Energy Today based on Load Energy Use Total (`r2056`).
+
 ## 0.9.6
 
 ### Changed
