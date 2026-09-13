@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.9
+
+### Changed
+- Standardized sensor attributes for direct Modbus sensors: Device class, Friendly name, State class, Unit of measurement, and Modbus address.
+- Standardized calculated sensor attributes: Device class, Friendly name, State class, Unit of measurement, `calculated: true`, and `source_sensors`.
+- Removed Modbus function, Modbus registers, and Modbus source attributes from sensor entities.
+- Removed calculation text from calculated sensor attributes.
+- Kept Load Energy Today as a calculated sensor based on Load Energy Use Total (`r2056`).
+
 ## 0.9.7
 
 ### Changed
