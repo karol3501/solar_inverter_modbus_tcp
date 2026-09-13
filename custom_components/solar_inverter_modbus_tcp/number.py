@@ -92,7 +92,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             try:
                 await self.coordinator.unit.write_register(4446, raw)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-            except Exception as err:  # noqa: BLE001
+            except Exception as err:
                 _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
                 try:
                     await self.coordinator.unit.disconnect()
