@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+### Fixed
+- Fixed Reconfigure so all integration options are available alongside the Modbus TCP connection settings.
+- Fixed EV charger detection by validating connection status, communication address, and serial number instead of relying on a single status register.
+- Re-run EV charger detection during reconfiguration so only detected chargers are enabled.
+
 ## 1.0.0
 
 ### Added
