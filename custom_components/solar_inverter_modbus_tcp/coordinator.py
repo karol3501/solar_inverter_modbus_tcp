@@ -120,8 +120,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             (1022, 4),
             (1046, 4),
             (1060, 1),
-            (1078, 12),
-            (2000, 71),
+            (1078, 6),
+            (2000, 69),
             (2100, 36),
         ]
         holding_blocks = [(259, 1), (4300, 8), (4446, 2)]
@@ -156,8 +156,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         for key, high_key, low_key in (
             ("sw_fault", "r19", "r20"),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (48, 50)),
-            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082, 1084, 1086, 1088)),
-            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068, 2070)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082)),
+            *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068)),
         ):
             if high_key in data and low_key in data:
                 data[key] = _i32(data[high_key], data[low_key])
@@ -166,13 +166,10 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         # Derive the aggregate values from the phase registers instead.
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
-            data["r26"] = data["total_pv_power"]
         if all(f"r{x}" in data for x in (74, 75, 76)):
             data["total_inverter_power"] = sum(_i16(int(data[f"r{x}"])) for x in (74, 75, 76))
-            data["r73"] = data["total_inverter_power"]
         if all(f"r{x}" in data for x in (92, 93, 94)):
             data["backup_active_power"] = sum(_i16(int(data[f"r{x}"])) for x in (92, 93, 94))
-            data["r91"] = data["backup_active_power"]
         if all(f"r{x}" in data for x in (1078, 1080, 1082)):
             data["total_grid_power"] = -sum(int(data[f"r{x}"]) for x in (1078, 1080, 1082))
         if "total_inverter_power" in data and "total_grid_power" in data:
