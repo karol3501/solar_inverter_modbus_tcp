@@ -32,6 +32,15 @@ def _u32(hi: int, lo: int) -> int:
     return (int(hi) << 16) | int(lo)
 
 
+def _u64(w0: int, w1: int, w2: int, w3: int) -> int:
+    return (
+        (int(w0) << 48)
+        | (int(w1) << 32)
+        | (int(w2) << 16)
+        | int(w3)
+    )
+
+
 def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
     for offset, value in enumerate(values):
         data[f"r{start + offset}"] = int(value)
@@ -43,12 +52,23 @@ def _is_connection_error(error: Exception) -> bool:
 
 
 class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
-    """Poll all telemetry used by the original Modbus YAML configuration."""
+    """Poll telemetry used by the Modbus integration."""
 
-    def __init__(self, hass: HomeAssistant, unit: ModbusUnit, entry_id: str, update_interval: int = 10, debug_logging: bool = False) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        unit: ModbusUnit,
+        entry_id: str,
+        update_interval: int = 10,
+        debug_logging: bool = False,
+        enable_generator: bool = False,
+        enable_ev_charger: bool = False,
+    ) -> None:
         self.unit = unit
         self.entry_id = entry_id
         self.debug_logging = debug_logging
+        self.enable_generator = enable_generator
+        self.enable_ev_charger = enable_ev_charger
         self.modbus_lock = asyncio.Lock()
         self._last_data: dict[str, object] = {}
         self._successful_requests = 0
@@ -124,6 +144,11 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             (2000, 69),
             (2100, 36),
         ]
+        if self.enable_generator:
+            input_blocks.append((103, 9))
+        if self.enable_ev_charger:
+            input_blocks.extend(((3200, 25), (3250, 25)))
+
         holding_blocks = [(259, 1), (4300, 8), (4446, 2)]
         total_requests = len(input_blocks) + len(holding_blocks)
         data: dict[str, object] = self._last_data.copy()
@@ -162,8 +187,12 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             if high_key in data and low_key in data:
                 data[key] = _i32(data[high_key], data[low_key])
 
-        # The inverter's aggregate power registers are not reliable on all models.
-        # Derive the aggregate values from the phase registers instead.
+        if self.enable_ev_charger:
+            for start in (3202, 3252):
+                keys = [f"r{start + offset}" for offset in range(4)]
+                if all(key in data for key in keys):
+                    data[keys[0]] = _u64(*(int(data[key]) for key in keys))
+
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
         if all(f"r{x}" in data for x in (74, 75, 76)):
