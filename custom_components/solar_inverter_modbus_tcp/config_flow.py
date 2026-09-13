@@ -11,6 +11,8 @@ from modbus_connection import ModbusTcpParams
 
 from .const import (
     CONF_DEBUG_LOGGING,
+    CONF_ENABLE_EV_CHARGER,
+    CONF_ENABLE_GENERATOR,
     CONF_SCAN_INTERVAL,
     CONF_UNIT_ID,
     DEFAULT_PORT,
@@ -70,6 +72,12 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             CONF_DEBUG_LOGGING: bool(
                                 user_input.get(CONF_DEBUG_LOGGING, False)
                             ),
+                            CONF_ENABLE_GENERATOR: bool(
+                                user_input.get(CONF_ENABLE_GENERATOR, False)
+                            ),
+                            CONF_ENABLE_EV_CHARGER: bool(
+                                user_input.get(CONF_ENABLE_EV_CHARGER, False)
+                            ),
                         },
                     )
 
@@ -83,6 +91,8 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_UNIT_ID, default=str(DEFAULT_UNIT_ID)
                 ): str,
                 vol.Optional(CONF_DEBUG_LOGGING, default=False): bool,
+                vol.Optional(CONF_ENABLE_GENERATOR, default=False): bool,
+                vol.Optional(CONF_ENABLE_EV_CHARGER, default=False): bool,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -175,6 +185,14 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
                     CONF_SCAN_INTERVAL,
                     default=self.config_entry.options.get(CONF_SCAN_INTERVAL, 10),
                 ): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
+                vol.Optional(
+                    CONF_ENABLE_GENERATOR,
+                    default=self.config_entry.options.get(CONF_ENABLE_GENERATOR, False),
+                ): bool,
+                vol.Optional(
+                    CONF_ENABLE_EV_CHARGER,
+                    default=self.config_entry.options.get(CONF_ENABLE_EV_CHARGER, False),
+                ): bool,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
