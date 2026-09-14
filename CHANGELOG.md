@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3
+
+### Fixed
+- Fixed the initial setup form so **Polling interval** is saved from the selected value instead of always falling back to 10 seconds.
+- Unified the initial setup and Reconfigure options so the same polling configuration is available in both flows.
+
 ## 1.0.2
 
 ### Fixed
