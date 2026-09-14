@@ -147,27 +147,41 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], se
         self._attr_device_info = _device_info(coordinator)
         self._baseline: float | None = None
         self._reset_date: str | None = None
+        self._restore_complete = False
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         state = await self.async_get_last_state()
         if state:
-            self._baseline = state.attributes.get("baseline_total")
-            self._reset_date = state.attributes.get("reset_date")
+            baseline = state.attributes.get("baseline_total")
+            reset_date = state.attributes.get("reset_date")
+            if baseline is not None and reset_date:
+                self._baseline = float(baseline)
+                self._reset_date = str(reset_date)
+        self._restore_complete = True
 
     @property
     def native_value(self) -> StateType:
+        if not self._restore_complete:
+            return None
+
         total = self.coordinator.data.get("r2056")
         if total is None:
             return None
         total = int(total) * 0.1
         today = dt_util.now().date().isoformat()
+
         if self._reset_date != today:
             self._baseline = total
             self._reset_date = today
-        if self._baseline is None:
+        elif self._baseline is None:
             self._baseline = total
-        return max(0.0, total - self._baseline)
+
+        value = total - self._baseline
+        if value < 0:
+            self._baseline = total
+            value = 0.0
+        return round(value, 1)
 
     @property
     def extra_state_attributes(self):
