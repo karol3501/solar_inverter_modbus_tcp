@@ -98,7 +98,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     await self.async_set_unique_id(f"{host}:{port}:{unit_id}")
                     self._abort_if_unique_id_configured()
                     options = {
-                        CONF_SCAN_INTERVAL: 10,
+                        CONF_SCAN_INTERVAL: int(user_input.get(CONF_SCAN_INTERVAL, 10)),
                         CONF_DEBUG_LOGGING: bool(user_input.get(CONF_DEBUG_LOGGING, False)),
                         CONF_ENABLE_GENERATOR: bool(user_input.get(CONF_ENABLE_GENERATOR, False)),
                         CONF_ENABLE_EV_CHARGER: bool(user_input.get(CONF_ENABLE_EV_CHARGER, False)),
@@ -141,6 +141,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Required(CONF_UNIT_ID, default=str(DEFAULT_UNIT_ID)): str,
                 vol.Optional(CONF_DEBUG_LOGGING, default=False): bool,
+                vol.Optional(CONF_SCAN_INTERVAL, default=10): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
                 vol.Optional(CONF_ENABLE_GENERATOR, default=False): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=False): bool,
             }
