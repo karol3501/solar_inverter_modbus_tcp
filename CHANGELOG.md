@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Fixed
+- Fixed **BMS Link Status** to show `connected` or `disconnected` instead of the raw Modbus value.
+- Fixed **Grid Meter Link Status** to show `connected` or `disconnected` instead of the raw Modbus value.
+
 ## 1.0.3
 
 ### Fixed
