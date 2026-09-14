@@ -140,10 +140,10 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_HOST): str,
                 vol.Required(CONF_PORT, default=DEFAULT_PORT): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Required(CONF_UNIT_ID, default=str(DEFAULT_UNIT_ID)): str,
-                vol.Optional(CONF_DEBUG_LOGGING, default=False): bool,
                 vol.Optional(CONF_SCAN_INTERVAL, default=10): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
                 vol.Optional(CONF_ENABLE_GENERATOR, default=False): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=False): bool,
+                vol.Optional(CONF_DEBUG_LOGGING, default=False): bool,
             }
         )
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
@@ -239,10 +239,10 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_HOST, default=entry.data.get(CONF_HOST, "")): str,
                 vol.Required(CONF_PORT, default=entry.data.get(CONF_PORT, DEFAULT_PORT)): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
                 vol.Required(CONF_UNIT_ID, default=str(entry.data.get(CONF_UNIT_ID, DEFAULT_UNIT_ID))): str,
-                vol.Optional(CONF_DEBUG_LOGGING, default=current_options.get(CONF_DEBUG_LOGGING, False)): bool,
                 vol.Optional(CONF_SCAN_INTERVAL, default=current_options.get(CONF_SCAN_INTERVAL, 10)): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
                 vol.Optional(CONF_ENABLE_GENERATOR, default=current_options.get(CONF_ENABLE_GENERATOR, False)): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=current_options.get(CONF_ENABLE_EV_CHARGER, False)): bool,
+                vol.Optional(CONF_DEBUG_LOGGING, default=current_options.get(CONF_DEBUG_LOGGING, False)): bool,
             }
         )
         return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors)
@@ -312,9 +312,9 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
     def _schema(self):
         return vol.Schema(
             {
-                vol.Optional(CONF_DEBUG_LOGGING, default=self.config_entry.options.get(CONF_DEBUG_LOGGING, False)): bool,
                 vol.Optional(CONF_SCAN_INTERVAL, default=self.config_entry.options.get(CONF_SCAN_INTERVAL, 10)): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
                 vol.Optional(CONF_ENABLE_GENERATOR, default=self.config_entry.options.get(CONF_ENABLE_GENERATOR, False)): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=self.config_entry.options.get(CONF_ENABLE_EV_CHARGER, False)): bool,
+                vol.Optional(CONF_DEBUG_LOGGING, default=self.config_entry.options.get(CONF_DEBUG_LOGGING, False)): bool,
             }
         )
