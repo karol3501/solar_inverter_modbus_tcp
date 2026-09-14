@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.5
+
+### Fixed
+- Fixed the **Connect solar inverter** and **Reconfigure solar inverter** form ordering so the optional settings are presented consistently, with **Debug logging** at the bottom.
+- Added missing translations and descriptions for **Polling interval**, **Generator**, **EV chargers**, and **Debug logging** in the Reconfigure and Options flows.
+- Fixed the Reconfigure completion message by adding the required **reconfigure_successful** translation, preventing the Home Assistant flow from ending with an unknown error.
+
 ## 1.0.4
 
 ### Fixed
