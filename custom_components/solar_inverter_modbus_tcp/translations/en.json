@@ -58,7 +58,8 @@
       "ev_detection_failed": "Unable to detect EV chargers. Check the Modbus connection and try again."
     },
     "abort": {
-      "already_configured": "This inverter is already configured."
+      "already_configured": "This inverter is already configured.",
+      "reconfigure_successful": "Reconfiguration successful."
     }
   },
   "options": {
