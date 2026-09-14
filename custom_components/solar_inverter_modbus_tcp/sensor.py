@@ -185,7 +185,12 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], se
 
     @property
     def extra_state_attributes(self):
-        return {"calculated": True, "source_sensors": ["Load Energy Use Total"]}
+        return {
+            "calculated": True,
+            "source_sensors": ["Load Energy Use Total"],
+            "baseline_total": self._baseline,
+            "reset_date": self._reset_date,
+        }
 
 
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
