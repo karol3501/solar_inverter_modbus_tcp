@@ -93,6 +93,8 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.Se
         value = self.coordinator.data.get(self.entity_description.data_key)
         if value is None:
             return None
+        if self.entity_description.data_key in {"r1022", "r1046"}:
+            return "connected" if int(value) == 1 else "disconnected"
         if self.entity_description.data_key == "r1023":
             return "No Fault" if int(value) == 0 else "Fault"
         if self.entity_description.word_count == 4:
