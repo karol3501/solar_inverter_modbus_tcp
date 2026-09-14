@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+### Fixed
+- Fixed **Load Energy Today** resetting to zero after an integration reload by correctly restoring the saved daily baseline before calculating the sensor value.
+- Preserved the daily baseline and reset date across Home Assistant integration reloads.
+
 ## 1.0.1
 
 ### Fixed
