@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.6
+
+### Fixed
+- Fixed Reconfigure to update the Config Entry unique ID when the Modbus TCP connection changes, reject duplicate connections, and reload the integration only once.
+- Assigned inverter entities to a separate Home Assistant device for each Config Entry.
+- Assigned each detected EV charger to its own Home Assistant device, identified by its serial number.
+- Preserved the raw **BMS Fault Code** as the `raw_code` attribute and standardized link-state labels to `Connected` / `Disconnected`.
+- Updated Number entity state only after a successful Modbus write and prevented invalid EV charger detection when the serial number is absent.
+- Added Polish translations and regression-test workflow coverage.
+
+
 ## 1.0.5
 
 ### Fixed
