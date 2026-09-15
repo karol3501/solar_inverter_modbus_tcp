@@ -6,19 +6,15 @@ import time
 
 from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
+from .device import inverter_device_info
 
 _LOGGER = logging.getLogger(__name__)
 _INTER_REQUEST_DELAY = 0.25
-
-
-def _device_info() -> DeviceInfo:
-    return DeviceInfo(identifiers={(DOMAIN, "solar_inverter")}, name="Solar Inverter", manufacturer="Generic", model="Modbus TCP")
 
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
@@ -44,7 +40,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
         self._attr_native_min_value = minimum
         self._attr_native_max_value = maximum
         self._attr_native_step = step
-        self._attr_device_info = _device_info()
+        self._attr_device_info = inverter_device_info(coordinator)
 
     @property
     def extra_state_attributes(self):
@@ -77,13 +73,6 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             else:
                 raw = (current_raw & 0xFF00) | requested
 
-            updated = dict(self.coordinator.data)
-            updated["r4446"] = raw
-            updated["peak_meter_baseline_soc"] = raw // 256
-            updated["peak_meter_reserved_soc"] = raw % 256
-            self.coordinator.async_set_updated_data(updated)
-            self.async_write_ha_state()
-
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE | FC06 | address=4446 | value=%s", raw)
 
@@ -98,5 +87,12 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
                     _LOGGER.debug("MODBUS DISCONNECT FAILED AFTER PEAK SHAVING WRITE | error=%s", disconnect_err)
                 raise
 
+            updated = dict(self.coordinator.data)
+            updated["r4446"] = raw
+            updated["peak_meter_baseline_soc"] = raw // 256
+            updated["peak_meter_reserved_soc"] = raw % 256
+            self.coordinator.async_set_updated_data(updated)
+
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE SUCCESS | FC06 | address=4446 | duration=%.3fs", time.monotonic() - started)
+

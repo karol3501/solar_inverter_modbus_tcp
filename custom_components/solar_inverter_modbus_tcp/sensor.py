@@ -13,6 +13,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
+from .device import ev_charger_device_info, inverter_device_info
 
 _DC = {"voltage": sensor.SensorDeviceClass.VOLTAGE, "current": sensor.SensorDeviceClass.CURRENT, "power": sensor.SensorDeviceClass.POWER, "temperature": sensor.SensorDeviceClass.TEMPERATURE, "battery": sensor.SensorDeviceClass.BATTERY, "energy": sensor.SensorDeviceClass.ENERGY}
 _SC = {"measurement": sensor.SensorStateClass.MEASUREMENT, "total_increasing": sensor.SensorStateClass.TOTAL_INCREASING}
@@ -59,21 +60,27 @@ EV_CHARGER_2_DESCRIPTION = [d("EV Charger 2 Connection Status", "r3250"), d("EV 
 DERIVED = [("work_status_text", "Work Status", None, None, None, ()), ("total_pv_power", "Total PV Power", "W", "power", "measurement", ("PV1 Power", "PV2 Power", "PV3 Power", "PV4 Power")), ("total_grid_power", "Total Grid Power", "W", "power", "measurement", ("Grid Active Power L1", "Grid Active Power L2", "Grid Active Power L3")), ("total_inverter_power", "Total Inverter Power", "W", "power", "measurement", ("Inverter Active Power L1", "Inverter Active Power L2", "Inverter Active Power L3")), ("backup_active_power", "Backup Active Power", "W", "power", "measurement", ("Backup Active Power A", "Backup Active Power B", "Backup Active Power C")), ("load_power", "Load Power", "W", "power", "measurement", ("Total Inverter Power", "Total Grid Power"))]
 
 
-def _device_info(coordinator: SolarInverterCoordinator) -> DeviceInfo:
-    return DeviceInfo(identifiers={(DOMAIN, "solar_inverter")}, name="Solar Inverter", manufacturer="Generic", model="Modbus TCP")
-
-
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator: SolarInverterCoordinator = entry.runtime_data
     descriptions = list(DESCRIPTION)
     if coordinator.enable_generator:
         descriptions.extend(GEN_DESCRIPTION)
+    entities: list[sensor.SensorEntity] = [
+        SolarInverterSensor(coordinator, description) for description in descriptions
+    ]
     if coordinator.enable_ev_charger:
         if 1 in coordinator.ev_chargers:
-            descriptions.extend(EV_CHARGER_1_DESCRIPTION)
+            device_info = ev_charger_device_info(coordinator, 1)
+            entities.extend(
+                SolarInverterSensor(coordinator, description, device_info)
+                for description in EV_CHARGER_1_DESCRIPTION
+            )
         if 2 in coordinator.ev_chargers:
-            descriptions.extend(EV_CHARGER_2_DESCRIPTION)
-    entities: list[sensor.SensorEntity] = [SolarInverterSensor(coordinator, description) for description in descriptions]
+            device_info = ev_charger_device_info(coordinator, 2)
+            entities.extend(
+                SolarInverterSensor(coordinator, description, device_info)
+                for description in EV_CHARGER_2_DESCRIPTION
+            )
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
     entities.append(SolarInverterEmsModeSensor(coordinator))
@@ -81,12 +88,17 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
 
 
 class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
-    def __init__(self, coordinator: SolarInverterCoordinator, description: SolarSensorDescription) -> None:
+    def __init__(
+        self,
+        coordinator: SolarInverterCoordinator,
+        description: SolarSensorDescription,
+        device_info: DeviceInfo | None = None,
+    ) -> None:
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{description.key}"
         self._attr_has_entity_name = True
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = device_info or inverter_device_info(coordinator)
 
     @property
     def native_value(self) -> StateType:
@@ -94,7 +106,7 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.Se
         if value is None:
             return None
         if self.entity_description.data_key in {"r1022", "r1046"}:
-            return "connected" if int(value) == 1 else "disconnected"
+            return "Connected" if int(value) == 1 else "Disconnected"
         if self.entity_description.data_key == "r1023":
             return "No Fault" if int(value) == 0 else "Fault"
         if self.entity_description.word_count == 4:
@@ -111,7 +123,12 @@ class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.Se
     def extra_state_attributes(self):
         if self.entity_description.modbus_address is None:
             return None
-        return {"modbus_address": self.entity_description.modbus_address}
+        attributes = {"modbus_address": self.entity_description.modbus_address}
+        if self.entity_description.data_key == "r1023":
+            raw_code = self.coordinator.data.get("r1023")
+            if raw_code is not None:
+                attributes["raw_code"] = int(raw_code)
+        return attributes
 
 
 class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
@@ -125,7 +142,7 @@ class SolarDerivedSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.Sen
         self._attr_native_unit_of_measurement = unit
         self._attr_device_class = _DC.get(device_class) if device_class else None
         self._attr_state_class = _SC.get(state_class) if state_class else None
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = inverter_device_info(coordinator)
 
     @property
     def native_value(self) -> StateType:
@@ -146,7 +163,7 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], se
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_load_energy_today"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = inverter_device_info(coordinator)
         self._baseline: float | None = None
         self._reset_date: str | None = None
         self._restore_complete = False
@@ -202,7 +219,7 @@ class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], se
     def __init__(self, coordinator: SolarInverterCoordinator) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_ems_mode"
-        self._attr_device_info = _device_info(coordinator)
+        self._attr_device_info = inverter_device_info(coordinator)
 
     @property
     def native_value(self) -> StateType:
@@ -212,3 +229,4 @@ class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], se
     @property
     def extra_state_attributes(self):
         return {"modbus_address": 4300}
+

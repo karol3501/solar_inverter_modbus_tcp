@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Połącz falownik solarny",
+        "description": "Podaj dane połączenia Modbus TCP.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus Unit ID",
+          "scan_interval": "Interwał odpytywania (sekundy)",
+          "enable_generator": "Włącz generator",
+          "enable_ev_charger": "Włącz ładowarki EV",
+          "debug_logging": "Włącz logowanie diagnostyczne"
+        },
+        "data_description": {
+          "host": "Adres IP lub nazwa hosta falownika.",
+          "port": "Port Modbus TCP, zwykle 502.",
+          "unit_id": "Modbus Unit ID, zwykle 1.",
+          "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
+          "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
+          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi."
+        }
+      },
+      "ev_detection": {
+        "title": "Wykrywanie ładowarek EV",
+        "description": "Wykryte ładowarki EV: {detected_ev_chargers}. Encje zostaną utworzone tylko dla wykrytych ładowarek."
+      },
+      "reconfigure": {
+        "title": "Zmień konfigurację falownika solarnego",
+        "description": "Podaj dane połączenia Modbus TCP oraz opcjonalne ustawienia telemetrii.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "unit_id": "Modbus Unit ID",
+          "scan_interval": "Interwał odpytywania (sekundy)",
+          "enable_generator": "Włącz generator",
+          "enable_ev_charger": "Włącz ładowarki EV",
+          "debug_logging": "Włącz logowanie diagnostyczne"
+        },
+        "data_description": {
+          "host": "Adres IP lub nazwa hosta falownika.",
+          "port": "Port Modbus TCP, zwykle 502.",
+          "unit_id": "Modbus Unit ID, zwykle 1.",
+          "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
+          "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
+          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nie można połączyć się z falownikiem lub odczytać rejestru 4300.",
+      "invalid_host": "Host nie może być pusty.",
+      "invalid_port": "Port musi być liczbą od 1 do 65535.",
+      "invalid_unit_id": "Unit ID musi być liczbą od 1 do 247.",
+      "ev_detection_failed": "Nie można wykryć ładowarek EV. Sprawdź połączenie Modbus i spróbuj ponownie."
+    },
+    "abort": {
+      "already_configured": "Ten falownik jest już skonfigurowany.",
+      "reconfigure_successful": "Konfiguracja została zmieniona."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Diagnostyka falownika solarnego",
+        "description": "Skonfiguruj opcjonalne bloki telemetrii i diagnostykę.",
+        "data": {
+          "scan_interval": "Interwał odpytywania (sekundy)",
+          "enable_generator": "Włącz generator",
+          "enable_ev_charger": "Włącz ładowarki EV",
+          "debug_logging": "Włącz logowanie diagnostyczne"
+        },
+        "data_description": {
+          "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
+          "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
+          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "debug_logging": "Zapisuje każde żądanie i odpowiedź Modbus z kodem funkcji, zakresem, wartościami, ponowieniami i czasami odpowiedzi."
+        }
+      }
+    }
+  }
+}
+

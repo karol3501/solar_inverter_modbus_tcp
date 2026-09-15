@@ -27,6 +27,10 @@ _LOGGER = logging.getLogger(__name__)
 class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    @staticmethod
+    def _entry_unique_id(host: str, port: int, unit_id: int) -> str:
+        return f"{host}:{port}:{unit_id}"
+
     async def _detect_ev_chargers(self, host: str, port: int, unit_id: int) -> list[int]:
         params = ModbusTcpParams(host=host, port=port)
         detected: list[int] = []
@@ -95,7 +99,9 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         err,
                     )
                 else:
-                    await self.async_set_unique_id(f"{host}:{port}:{unit_id}")
+                    await self.async_set_unique_id(
+                        self._entry_unique_id(host, port, unit_id)
+                    )
                     self._abort_if_unique_id_configured()
                     options = {
                         CONF_SCAN_INTERVAL: int(user_input.get(CONF_SCAN_INTERVAL, 10)),
@@ -152,11 +158,13 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         options = self._pending_entry_options
         options[CONF_EV_CHARGERS] = self._pending_ev_chargers
         if self._pending_reconfigure:
-            return self.async_update_reload_and_abort(
+            self.hass.config_entries.async_update_entry(
                 self._pending_reconfigure_entry,
-                data_updates=self._pending_entry_data,
-                options_updates=options,
+                data=self._pending_entry_data,
+                options=options,
+                unique_id=self._pending_reconfigure_unique_id,
             )
+            return self.async_abort(reason="reconfigure_successful")
         return self.async_create_entry(
             title=f"Solar Inverter ({self._pending_entry_data[CONF_HOST]})",
             data=self._pending_entry_data,
@@ -198,6 +206,19 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         err,
                     )
                 else:
+                    new_unique_id = self._entry_unique_id(host, port, unit_id)
+                    duplicate_entry = next(
+                        (
+                            configured_entry
+                            for configured_entry in self._async_current_entries()
+                            if configured_entry.entry_id != entry.entry_id
+                            and configured_entry.unique_id == new_unique_id
+                        ),
+                        None,
+                    )
+                    if duplicate_entry is not None:
+                        return self.async_abort(reason="already_configured")
+
                     options = {
                         CONF_SCAN_INTERVAL: int(user_input.get(CONF_SCAN_INTERVAL, current_options.get(CONF_SCAN_INTERVAL, 10))),
                         CONF_DEBUG_LOGGING: bool(user_input.get(CONF_DEBUG_LOGGING, current_options.get(CONF_DEBUG_LOGGING, False))),
@@ -222,17 +243,20 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             self._pending_ev_chargers = detected
                             self._pending_reconfigure = True
                             self._pending_reconfigure_entry = entry
+                            self._pending_reconfigure_unique_id = new_unique_id
                             return self.async_show_form(
                                 step_id="ev_detection",
                                 data_schema=vol.Schema({}),
                                 description_placeholders=self._ev_detection_placeholders(detected),
                             )
                     else:
-                        return self.async_update_reload_and_abort(
+                        self.hass.config_entries.async_update_entry(
                             entry,
-                            data_updates=data_updates,
-                            options_updates=options,
+                            data=data_updates,
+                            options=options,
+                            unique_id=new_unique_id,
                         )
+                        return self.async_abort(reason="reconfigure_successful")
 
         schema = vol.Schema(
             {
@@ -318,3 +342,4 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(CONF_DEBUG_LOGGING, default=self.config_entry.options.get(CONF_DEBUG_LOGGING, False)): bool,
             }
         )
+

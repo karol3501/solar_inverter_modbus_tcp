@@ -9,6 +9,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
+from .device import inverter_device_info
 
 _LOGGER = logging.getLogger(__name__)
 OPTIONS = list(EMS_MODES.values())
@@ -29,12 +30,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
         super().__init__(coordinator)
         self.coordinator = coordinator
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_ems_mode_control"
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, "solar_inverter")},
-            "name": "Solar Inverter",
-            "manufacturer": "Generic",
-            "model": "Modbus TCP",
-        }
+        self._attr_device_info = inverter_device_info(coordinator)
 
     @property
     def extra_state_attributes(self):
@@ -73,3 +69,4 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
         updated = dict(self.coordinator.data)
         updated["ems_mode"] = int(values[0])
         self.coordinator.async_set_updated_data(updated)
+

@@ -47,7 +47,9 @@ After installation:
    - **Unit ID** — Modbus slave/unit ID, normally `1`
 5. Finish the setup.
 
-The integration creates a single Home Assistant device and exposes the supported inverter telemetry and controls through that device.
+Each integration entry creates its own Home Assistant device for the inverter. When EV chargers are enabled and detected, each charger is added as a separate device named `EV Charger <serial number>` and contains only its own entities.
+
+The polling interval is the target interval between completed update cycles. The actual duration depends on the enabled telemetry blocks and the Modbus response time.
 
 ## Updates
 
@@ -62,3 +64,4 @@ Every integration change should increment the version according to the project's
 ## License
 
 MIT License.
+

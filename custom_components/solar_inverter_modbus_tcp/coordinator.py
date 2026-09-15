@@ -148,10 +148,20 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                     except Exception as err:  # noqa: BLE001
                         _LOGGER.warning("EV CHARGER DETECTION FAILED | charger=%s | address=%s | error=%s", charger, address, err)
                 detected = []
-                if int(self._last_data.get("r3200", 0)) == 1:
-                    detected.append(1)
-                if int(self._last_data.get("r3250", 0)) == 1:
-                    detected.append(2)
+                for charger, base_address in ((1, 3200), (2, 3250)):
+                    serial_words = [
+                        self._last_data.get(f"r{base_address + offset}")
+                        for offset in range(2, 6)
+                    ]
+                    if (
+                        int(self._last_data.get(f"r{base_address}", 0)) == 1
+                        and 1
+                        <= int(self._last_data.get(f"r{base_address + 1}", 0))
+                        <= 247
+                        and all(word is not None for word in serial_words)
+                        and any(int(word) != 0 for word in serial_words)
+                    ):
+                        detected.append(charger)
                 self.ev_chargers = tuple(detected)
                 _LOGGER.info("EV CHARGER DETECTION | detected=%s", list(self.ev_chargers))
             for charger in self.ev_chargers:
@@ -217,3 +227,4 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
 
         return data
+
