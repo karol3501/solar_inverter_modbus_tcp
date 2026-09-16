@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.10
+
+### Fixed
+- Corrected the maximum charge and discharge power controls (`306`, `307`) to use the inverter's 0.1% register scale. For example, raw value `900` is now shown as `90%`.
+- Set the documented ranges for all battery controls: charge/discharge `0–100%`, maximum SOC `70–100%`, and minimum SOC `10–50%`.
+
+### Changed
+- Battery controls and **Export Power Limit** are displayed as sliders. The export slider uses watts and defaults to `0–1000 W`.
+- Added **Inverter rated power (W)** and **Maximum export limit (W)** to Reconfigure, alongside the existing Integration Options settings.
+
 ## 1.0.9
 
 ### Added

@@ -30,23 +30,25 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             "battery_maximum_charge_power",
             "Battery Maximum Charge Power",
             306,
-            10,
+            0,
             100,
+            0.1,
         ),
         BatterySettingNumber(
             coordinator,
             "battery_maximum_discharge_power",
             "Battery Maximum Discharge Power",
             307,
-            10,
+            0,
             100,
+            0.1,
         ),
         BatterySettingNumber(
             coordinator,
             "battery_maximum_soc",
             "Battery Maximum SOC",
             308,
-            10,
+            70,
             100,
         ),
         BatterySettingNumber(
@@ -55,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             "Battery Minimum SOC",
             309,
             10,
-            90,
+            50,
         ),
     ])
 
@@ -139,7 +141,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
     _attr_name = "Export Power Limit"
     _attr_device_class = NumberDeviceClass.POWER
     _attr_native_unit_of_measurement = UnitOfPower.WATT
-    _attr_mode = NumberMode.BOX
+    _attr_mode = NumberMode.SLIDER
     _attr_native_step = 1
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -206,7 +208,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
 
     _attr_has_entity_name = True
     _attr_native_unit_of_measurement = "%"
-    _attr_mode = NumberMode.AUTO
+    _attr_mode = NumberMode.SLIDER
     _attr_native_step = 1
     _attr_entity_category = EntityCategory.CONFIG
 
@@ -218,10 +220,12 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
         address: int,
         minimum: int,
         maximum: int,
+        scale: float = 1.0,
     ) -> None:
         super().__init__(coordinator)
         self._data_key = data_key
         self._address = address
+        self._scale = scale
         self._attr_name = name
         self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{data_key}"
         self._attr_native_min_value = minimum
@@ -231,17 +235,22 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
     @property
     def native_value(self) -> float | None:
         value = self.coordinator.data.get(f"r{self._address}")
-        return float(value) if value is not None else None
+        return float(value) * self._scale if value is not None else None
 
     @property
     def extra_state_attributes(self):
-        return {"modbus_address": self._address}
+        raw_value = self.coordinator.data.get(f"r{self._address}")
+        return {
+            "modbus_address": self._address,
+            "raw_value": int(raw_value) if raw_value is not None else None,
+        }
 
     async def async_set_native_value(self, value: float) -> None:
         requested = max(
             self._attr_native_min_value,
             min(self._attr_native_max_value, round(value)),
         )
+        raw_value = round(requested / self._scale)
 
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
@@ -249,25 +258,25 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
                 _LOGGER.debug(
                     "MODBUS WRITE | FC06 | address=%s | value=%s",
                     self._address,
-                    requested,
+                    raw_value,
                 )
             try:
-                await self.coordinator.unit.write_register(self._address, requested)
+                await self.coordinator.unit.write_register(self._address, raw_value)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
                 values = await self.coordinator.unit.read_holding_registers(
                     self._address, 1
                 )
-                if not values or int(values[0]) != requested:
+                if not values or int(values[0]) != raw_value:
                     raise RuntimeError(
                         "Battery setting write verification failed: "
-                        f"expected {requested}, got {values!r}"
+                        f"expected {raw_value}, got {values!r}"
                     )
             except Exception as err:
                 _LOGGER.error(
                     "BATTERY SETTING WRITE FAILED | FC06 | address=%s | value=%s | "
                     "duration=%.3fs | error=%s",
                     self._address,
-                    requested,
+                    raw_value,
                     time.monotonic() - started,
                     err,
                 )

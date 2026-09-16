@@ -37,7 +37,9 @@
           "scan_interval": "Polling interval (seconds)",
           "enable_generator": "Enable generator",
           "enable_ev_charger": "Enable EV chargers",
-          "debug_logging": "Enable debug logging"
+          "debug_logging": "Enable debug logging",
+          "inverter_rated_power_watts": "Inverter rated power (W)",
+          "export_limit_watts": "Maximum export limit (W)"
         },
         "data_description": {
           "host": "IP address or hostname of the inverter.",
@@ -46,7 +48,9 @@
           "scan_interval": "How often the inverter is polled for new data.",
           "enable_generator": "Create generator sensors and poll generator registers.",
           "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
-          "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings."
+          "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings.",
+          "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
+          "export_limit_watts": "Upper limit of the Export Power Limit entity."
         }
       }
     },

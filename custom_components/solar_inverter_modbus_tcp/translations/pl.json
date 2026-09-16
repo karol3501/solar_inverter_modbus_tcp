@@ -37,7 +37,9 @@
           "scan_interval": "Interwał odpytywania (sekundy)",
           "enable_generator": "Włącz generator",
           "enable_ev_charger": "Włącz ładowarki EV",
-          "debug_logging": "Włącz logowanie diagnostyczne"
+          "debug_logging": "Włącz logowanie diagnostyczne",
+          "inverter_rated_power_watts": "Moc znamionowa falownika (W)",
+          "export_limit_watts": "Maksymalny limit eksportu (W)"
         },
         "data_description": {
           "host": "Adres IP lub nazwa hosta falownika.",
@@ -46,7 +48,9 @@
           "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
           "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
           "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
-          "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi."
+          "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi.",
+          "inverter_rated_power_watts": "Służy do przeliczenia limitu w watach na procent wymagany przez rejestr Modbus 259.",
+          "export_limit_watts": "Górna granica encji Export Power Limit."
         }
       }
     },

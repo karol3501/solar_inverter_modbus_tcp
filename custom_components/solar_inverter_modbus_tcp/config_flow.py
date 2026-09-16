@@ -80,7 +80,6 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 unit_id = int(user_input[CONF_UNIT_ID])
             except (TypeError, ValueError):
                 unit_id = -1
-
             if not host:
                 errors[CONF_HOST] = "invalid_host"
             elif not 1 <= port <= 65535:
@@ -187,6 +186,23 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 unit_id = int(user_input[CONF_UNIT_ID])
             except (TypeError, ValueError):
                 unit_id = -1
+            inverter_rated_power_watts = int(
+                user_input.get(
+                    CONF_INVERTER_RATED_POWER_WATTS,
+                    current_options.get(
+                        CONF_INVERTER_RATED_POWER_WATTS,
+                        DEFAULT_INVERTER_RATED_POWER_WATTS,
+                    ),
+                )
+            )
+            export_limit_watts = int(
+                user_input.get(
+                    CONF_EXPORT_LIMIT_WATTS,
+                    current_options.get(
+                        CONF_EXPORT_LIMIT_WATTS, DEFAULT_EXPORT_LIMIT_WATTS
+                    ),
+                )
+            )
 
             if not host:
                 errors[CONF_HOST] = "invalid_host"
@@ -194,6 +210,8 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_PORT] = "invalid_port"
             elif not 1 <= unit_id <= 247:
                 errors[CONF_UNIT_ID] = "invalid_unit_id"
+            elif export_limit_watts > inverter_rated_power_watts * 0.6:
+                errors[CONF_EXPORT_LIMIT_WATTS] = "export_limit_too_high"
             else:
                 try:
                     params = ModbusTcpParams(host=host, port=port)
@@ -228,6 +246,8 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_DEBUG_LOGGING: bool(user_input.get(CONF_DEBUG_LOGGING, current_options.get(CONF_DEBUG_LOGGING, False))),
                         CONF_ENABLE_GENERATOR: bool(user_input.get(CONF_ENABLE_GENERATOR, current_options.get(CONF_ENABLE_GENERATOR, False))),
                         CONF_ENABLE_EV_CHARGER: bool(user_input.get(CONF_ENABLE_EV_CHARGER, current_options.get(CONF_ENABLE_EV_CHARGER, False))),
+                        CONF_INVERTER_RATED_POWER_WATTS: inverter_rated_power_watts,
+                        CONF_EXPORT_LIMIT_WATTS: export_limit_watts,
                         CONF_EV_CHARGERS: [],
                     }
                     data_updates = {
@@ -271,6 +291,19 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_ENABLE_GENERATOR, default=current_options.get(CONF_ENABLE_GENERATOR, False)): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=current_options.get(CONF_ENABLE_EV_CHARGER, False)): bool,
                 vol.Optional(CONF_DEBUG_LOGGING, default=current_options.get(CONF_DEBUG_LOGGING, False)): bool,
+                vol.Optional(
+                    CONF_INVERTER_RATED_POWER_WATTS,
+                    default=current_options.get(
+                        CONF_INVERTER_RATED_POWER_WATTS,
+                        DEFAULT_INVERTER_RATED_POWER_WATTS,
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=100000)),
+                vol.Optional(
+                    CONF_EXPORT_LIMIT_WATTS,
+                    default=current_options.get(
+                        CONF_EXPORT_LIMIT_WATTS, DEFAULT_EXPORT_LIMIT_WATTS
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=0, max=100000)),
             }
         )
         return self.async_show_form(step_id="reconfigure", data_schema=schema, errors=errors)
