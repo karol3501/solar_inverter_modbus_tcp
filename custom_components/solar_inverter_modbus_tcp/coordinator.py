@@ -66,6 +66,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         ev_chargers: list[int] | tuple[int, ...] | None = None,
         export_limit_watts: int = 1000,
         inverter_rated_power_watts: int = 10000,
+        ev_charger_1_rated_power_kw: float = 11.0,
+        ev_charger_2_rated_power_kw: float = 11.0,
     ) -> None:
         self.unit = unit
         self.entry_id = entry_id
@@ -75,6 +77,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self.ev_chargers = None if ev_chargers is None else tuple(int(charger) for charger in ev_chargers)
         self.export_limit_watts = int(export_limit_watts)
         self.inverter_rated_power_watts = int(inverter_rated_power_watts)
+        self.ev_charger_rated_power_kw = {1: float(ev_charger_1_rated_power_kw), 2: float(ev_charger_2_rated_power_kw)}
         self.modbus_lock = asyncio.Lock()
         self._last_data: dict[str, object] = {}
         self._successful_requests = 0
@@ -174,7 +177,10 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 elif charger == 2:
                     input_blocks.append((3250, 25))
 
-        holding_blocks = [(259, 1), (306, 4), (4300, 8), (4446, 2)]
+        holding_blocks = [(259, 1), (306, 4), (4300, 8), (4446, 15)]
+        if self.enable_ev_charger:
+            for charger in self.ev_chargers or ():
+                holding_blocks.append((4700 if charger == 1 else 4750, 5))
         total_requests = len(input_blocks) + len(holding_blocks)
         data: dict[str, object] = self._last_data.copy()
         self._successful_requests = 0
@@ -231,3 +237,4 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
 
         return data
+

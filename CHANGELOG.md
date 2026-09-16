@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.11
+
+### Added
+- Added EMS controls for Self-Use and Backup reserved SOC, Force Charge and Force Discharge SOC/power, and Time of Use period 1 charge/discharge times, power and stop-SOC values.
+- Added EV Charger controls for each detected charger: charging power, offline charging power, maximum grid charging power, charging mode, and green power mode.
+
+### Changed
+- EV Charger power controls use kW values with a `0.1 kW` step and are limited by the charger rated power selected in the integration configuration.
+- Each new EMS and EV control reads its Modbus register back after writing; Home Assistant updates its state only when the inverter confirms the requested value.
+
 ## 1.0.10
 
 ### Fixed
@@ -261,3 +271,4 @@
 ### Fixed
 - Added a shared Modbus I/O lock so coordinator polling and write operations cannot overlap on the same TCP connection.
 - Added controlled retry handling for intermittent FC03/FC04 timeouts and connection drops.
+

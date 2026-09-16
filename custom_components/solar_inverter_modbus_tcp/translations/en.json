@@ -39,7 +39,9 @@
           "enable_ev_charger": "Enable EV chargers",
           "debug_logging": "Enable debug logging",
           "inverter_rated_power_watts": "Inverter rated power (W)",
-          "export_limit_watts": "Maximum export limit (W)"
+          "export_limit_watts": "Maximum export limit (W)",
+          "ev_charger_1_rated_power_kw": "EV Charger 1 rated power (kW)",
+          "ev_charger_2_rated_power_kw": "EV Charger 2 rated power (kW)"
         },
         "data_description": {
           "host": "IP address or hostname of the inverter.",
@@ -50,7 +52,9 @@
           "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
           "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings.",
           "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
-          "export_limit_watts": "Upper limit of the Export Power Limit entity."
+          "export_limit_watts": "Upper limit of the Export Power Limit entity.",
+          "ev_charger_1_rated_power_kw": "Maximum power used by EV Charger 1 control entities.",
+          "ev_charger_2_rated_power_kw": "Maximum power used by EV Charger 2 control entities."
         }
       }
     },
@@ -78,7 +82,9 @@
           "enable_ev_charger": "Enable EV chargers",
           "debug_logging": "Enable debug logging",
           "inverter_rated_power_watts": "Inverter rated power (W)",
-          "export_limit_watts": "Maximum export limit (W)"
+          "export_limit_watts": "Maximum export limit (W)",
+          "ev_charger_1_rated_power_kw": "EV Charger 1 rated power (kW)",
+          "ev_charger_2_rated_power_kw": "EV Charger 2 rated power (kW)"
         },
         "data_description": {
           "scan_interval": "How often the inverter is polled for new data.",
@@ -86,9 +92,12 @@
           "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
           "debug_logging": "Log every Modbus request and response with function code, address/range, values, retry and timing information.",
           "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
-          "export_limit_watts": "Upper limit of the Export Power Limit entity."
+          "export_limit_watts": "Upper limit of the Export Power Limit entity.",
+          "ev_charger_1_rated_power_kw": "Maximum power used by EV Charger 1 control entities.",
+          "ev_charger_2_rated_power_kw": "Maximum power used by EV Charger 2 control entities."
         }
       }
     }
   }
 }
+

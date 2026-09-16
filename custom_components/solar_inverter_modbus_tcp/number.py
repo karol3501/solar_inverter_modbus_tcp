@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
-from .device import inverter_device_info
+from .device import ev_charger_device_info, inverter_device_info
 
 _LOGGER = logging.getLogger(__name__)
 _INTER_REQUEST_DELAY = 0.25
@@ -21,7 +21,7 @@ _INTER_REQUEST_DELAY = 0.25
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator: SolarInverterCoordinator = entry.runtime_data
-    async_add_entities([
+    entities = [
         PeakShavingNumber(coordinator, "peak_meter_baseline_soc", "Peak Shaving Baseline SOC", 10, 100, 1, True),
         PeakShavingNumber(coordinator, "peak_meter_reserved_soc", "Peak Shaving Reserved SOC", 10, 100, 1, False),
         ExportPowerLimitNumber(coordinator),
@@ -59,7 +59,60 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             10,
             50,
         ),
-    ])
+    ]
+    ems_settings = [
+        ("ems_self_use_reserved_soc", "Self-Use Reserved SOC", 4301, 10, 100, 1.0, "%", NumberMode.SLIDER),
+        ("ems_backup_reserved_soc", "Backup Reserved SOC", 4302, 60, 100, 1.0, "%", NumberMode.SLIDER),
+        ("ems_force_charge_soc", "Force Charge SOC", 4303, 10, 100, 1.0, "%", NumberMode.SLIDER),
+        ("ems_force_charge_maximum_power", "Force Charge Maximum Power", 4304, 0, 100, 0.1, "%", NumberMode.SLIDER),
+        ("ems_force_discharge_soc", "Force Discharge SOC", 4305, 10, 100, 1.0, "%", NumberMode.SLIDER),
+        ("ems_force_discharge_maximum_power", "Force Discharge Maximum Power", 4306, 0, 100, 0.1, "%", NumberMode.SLIDER),
+        ("tou_period_1_charge_start_hour", "TOU Period 1 Charge Start Hour", 4449, 0, 23, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_charge_start_minute", "TOU Period 1 Charge Start Minute", 4450, 0, 59, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_charge_end_hour", "TOU Period 1 Charge End Hour", 4451, 0, 23, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_charge_end_minute", "TOU Period 1 Charge End Minute", 4452, 0, 59, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_charge_power", "TOU Period 1 Charge Power", 4453, 0, 100, 1.0, "%", NumberMode.SLIDER),
+        ("tou_period_1_stop_charge_soc", "TOU Period 1 Stop Charge SOC", 4454, 10, 100, 1.0, "%", NumberMode.SLIDER),
+        ("tou_period_1_discharge_start_hour", "TOU Period 1 Discharge Start Hour", 4455, 0, 23, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_discharge_start_minute", "TOU Period 1 Discharge Start Minute", 4456, 0, 59, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_discharge_end_hour", "TOU Period 1 Discharge End Hour", 4457, 0, 23, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_discharge_end_minute", "TOU Period 1 Discharge End Minute", 4458, 0, 59, 1.0, None, NumberMode.BOX),
+        ("tou_period_1_discharge_power", "TOU Period 1 Discharge Power", 4459, 0, 100, 1.0, "%", NumberMode.SLIDER),
+        ("tou_period_1_stop_discharge_soc", "TOU Period 1 Stop Discharge SOC", 4460, 10, 100, 1.0, "%", NumberMode.SLIDER),
+    ]
+    entities.extend(EmsSettingNumber(coordinator, *setting) for setting in ems_settings)
+    for charger in coordinator.ev_chargers or ():
+        address = 4700 if charger == 1 else 4750
+        rated_power_kw = coordinator.ev_charger_rated_power_kw[charger]
+        entities.extend(
+            (
+                EvChargerPowerNumber(
+                    coordinator,
+                    charger,
+                    "charging_power_setting",
+                    "Charging Power Setting",
+                    address,
+                    rated_power_kw,
+                ),
+                EvChargerPowerNumber(
+                    coordinator,
+                    charger,
+                    "offline_charging_power",
+                    "Offline Charging Power",
+                    address + 1,
+                    rated_power_kw,
+                ),
+                EvChargerPowerNumber(
+                    coordinator,
+                    charger,
+                    "max_charging_power_from_grid",
+                    "Max Charging Power from Grid",
+                    address + 4,
+                    rated_power_kw,
+                ),
+            )
+        )
+    async_add_entities(entities)
 
 
 class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity):
@@ -298,3 +351,80 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
                 self._address,
                 time.monotonic() - started,
             )
+
+
+class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity):
+    """Expose one verified EMS holding-register setting."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_native_step = 1
+
+    def __init__(self, coordinator, data_key, name, address, minimum, maximum, scale, unit, mode) -> None:
+        super().__init__(coordinator)
+        self._address = address
+        self._scale = scale
+        self._attr_name = name
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_{data_key}"
+        self._attr_native_min_value = minimum
+        self._attr_native_max_value = maximum
+        self._attr_native_unit_of_measurement = unit
+        self._attr_mode = mode
+        self._attr_device_info = inverter_device_info(coordinator)
+
+    @property
+    def native_value(self):
+        value = self.coordinator.data.get(f"r{self._address}")
+        return float(value) * self._scale if value is not None else None
+
+    @property
+    def extra_state_attributes(self):
+        raw = self.coordinator.data.get(f"r{self._address}")
+        return {"modbus_address": self._address, "raw_value": int(raw) if raw is not None else None}
+
+    async def async_set_native_value(self, value: float) -> None:
+        requested = max(
+            self._attr_native_min_value,
+            min(self._attr_native_max_value, float(value)),
+        )
+        raw = round(requested / self._scale)
+        async with self.coordinator.modbus_lock:
+            await self.coordinator.unit.write_register(self._address, raw)
+            await asyncio.sleep(_INTER_REQUEST_DELAY)
+            values = await self.coordinator.unit.read_holding_registers(self._address, 1)
+            if not values or int(values[0]) != raw:
+                raise RuntimeError(f"EMS setting write verification failed: expected {raw}, got {values!r}")
+        updated = dict(self.coordinator.data)
+        updated[f"r{self._address}"] = int(values[0])
+        self.coordinator.async_set_updated_data(updated)
+
+
+class EvChargerPowerNumber(EmsSettingNumber):
+    """Expose one verified EV charger power setting in kW."""
+
+    _attr_native_unit_of_measurement = "kW"
+    _attr_mode = NumberMode.SLIDER
+    _attr_native_step = 0.1
+
+    def __init__(
+        self,
+        coordinator: SolarInverterCoordinator,
+        charger: int,
+        data_key: str,
+        name: str,
+        address: int,
+        rated_power_kw: float,
+    ) -> None:
+        super().__init__(
+            coordinator,
+            f"ev_charger_{charger}_{data_key}",
+            name,
+            address,
+            0,
+            rated_power_kw,
+            0.1,
+            "kW",
+            NumberMode.SLIDER,
+        )
+        self._attr_device_info = ev_charger_device_info(coordinator, charger)
+

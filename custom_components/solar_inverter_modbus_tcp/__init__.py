@@ -14,6 +14,8 @@ from .const import (
     CONF_ENABLE_EV_CHARGER,
     CONF_ENABLE_GENERATOR,
     CONF_EV_CHARGERS,
+    CONF_EV_CHARGER_1_RATED_POWER_KW,
+    CONF_EV_CHARGER_2_RATED_POWER_KW,
     CONF_EXPORT_LIMIT_WATTS,
     CONF_INVERTER_RATED_POWER_WATTS,
     CONF_SCAN_INTERVAL,
@@ -53,6 +55,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_INVERTER_RATED_POWER_WATTS,
             DEFAULT_INVERTER_RATED_POWER_WATTS,
         ),
+        ev_charger_1_rated_power_kw=entry.options.get(CONF_EV_CHARGER_1_RATED_POWER_KW, 11.0),
+        ev_charger_2_rated_power_kw=entry.options.get(CONF_EV_CHARGER_2_RATED_POWER_KW, 11.0),
     )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
@@ -107,3 +111,4 @@ async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
