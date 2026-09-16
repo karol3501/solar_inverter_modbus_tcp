@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.7
+
+### Fixed
+- Disabled Generator and EV Charger entities are now hidden by the integration when their options are turned off, while retaining their entity IDs and unique IDs for safe re-enabling.
+
+### Added
+- Added transparent Home Assistant branding assets: a compliant square icon and a horizontal integration logo.
+
+
 ## 1.0.6
 
 ### Fixed
