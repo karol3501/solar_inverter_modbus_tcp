@@ -174,7 +174,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                 elif charger == 2:
                     input_blocks.append((3250, 25))
 
-        holding_blocks = [(259, 1), (4300, 8), (4446, 2)]
+        holding_blocks = [(259, 1), (306, 4), (4300, 8), (4446, 2)]
         total_requests = len(input_blocks) + len(holding_blocks)
         data: dict[str, object] = self._last_data.copy()
         self._successful_requests = 0

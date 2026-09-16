@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9
+
+### Added
+- Added battery configuration controls for maximum charge power (`306`), maximum discharge power (`307`), maximum SOC (`308`) and minimum SOC (`309`).
+- Each battery setting is read back from the inverter after writing, so Home Assistant updates only after the value is confirmed.
+
 ## 1.0.8
 
 ### Added
