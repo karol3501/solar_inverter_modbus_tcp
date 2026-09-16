@@ -55,6 +55,7 @@
       "invalid_host": "Host cannot be empty.",
       "invalid_port": "Port must be between 1 and 65535.",
       "invalid_unit_id": "Unit ID must be between 1 and 247.",
+      "export_limit_too_high": "Export limit cannot exceed 60% of the inverter rated power.",
       "ev_detection_failed": "Unable to detect EV chargers. Check the Modbus connection and try again."
     },
     "abort": {
@@ -71,13 +72,17 @@
           "scan_interval": "Polling interval (seconds)",
           "enable_generator": "Enable generator",
           "enable_ev_charger": "Enable EV chargers",
-          "debug_logging": "Enable debug logging"
+          "debug_logging": "Enable debug logging",
+          "inverter_rated_power_watts": "Inverter rated power (W)",
+          "export_limit_watts": "Maximum export limit (W)"
         },
         "data_description": {
           "scan_interval": "How often the inverter is polled for new data.",
           "enable_generator": "Create generator sensors and poll generator registers.",
           "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
-          "debug_logging": "Log every Modbus request and response with function code, address/range, values, retry and timing information."
+          "debug_logging": "Log every Modbus request and response with function code, address/range, values, retry and timing information.",
+          "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
+          "export_limit_watts": "Upper limit of the Export Power Limit entity."
         }
       }
     }

@@ -64,6 +64,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         enable_generator: bool = False,
         enable_ev_charger: bool = False,
         ev_chargers: list[int] | tuple[int, ...] | None = None,
+        export_limit_watts: int = 1000,
+        inverter_rated_power_watts: int = 10000,
     ) -> None:
         self.unit = unit
         self.entry_id = entry_id
@@ -71,6 +73,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self.enable_generator = enable_generator
         self.enable_ev_charger = enable_ev_charger
         self.ev_chargers = None if ev_chargers is None else tuple(int(charger) for charger in ev_chargers)
+        self.export_limit_watts = int(export_limit_watts)
+        self.inverter_rated_power_watts = int(inverter_rated_power_watts)
         self.modbus_lock = asyncio.Lock()
         self._last_data: dict[str, object] = {}
         self._successful_requests = 0
@@ -227,4 +231,3 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
 
         return data
-

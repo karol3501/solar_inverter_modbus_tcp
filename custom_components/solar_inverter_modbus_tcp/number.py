@@ -4,7 +4,9 @@ import asyncio
 import logging
 import time
 
-from homeassistant.components.number import NumberEntity, NumberMode
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
+from homeassistant.const import UnitOfPower
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -22,6 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
     async_add_entities([
         PeakShavingNumber(coordinator, "peak_meter_baseline_soc", "Peak Shaving Baseline SOC", 10, 100, 1, True),
         PeakShavingNumber(coordinator, "peak_meter_reserved_soc", "Peak Shaving Reserved SOC", 10, 100, 1, False),
+        ExportPowerLimitNumber(coordinator),
     ])
 
 
@@ -96,3 +99,71 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE SUCCESS | FC06 | address=4446 | duration=%.3fs", time.monotonic() - started)
 
+
+class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity):
+    """Expose the percentage-based GCF export limit as watts."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Export Power Limit"
+    _attr_device_class = NumberDeviceClass.POWER
+    _attr_native_unit_of_measurement = UnitOfPower.WATT
+    _attr_mode = NumberMode.BOX
+    _attr_native_step = 1
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator: SolarInverterCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_export_power_limit"
+        self._attr_native_min_value = 0
+        self._attr_native_max_value = coordinator.export_limit_watts
+        self._attr_device_info = inverter_device_info(coordinator)
+
+    @property
+    def native_value(self) -> float | None:
+        raw_value = self.coordinator.data.get("r259")
+        if raw_value is None:
+            return None
+        return round(int(raw_value) * self.coordinator.inverter_rated_power_watts / 1000)
+
+    @property
+    def extra_state_attributes(self):
+        raw_value = self.coordinator.data.get("r259")
+        return {
+            "modbus_address": 259,
+            "raw_value": int(raw_value) if raw_value is not None else None,
+            "percent": int(raw_value) / 10 if raw_value is not None else None,
+            "inverter_rated_power_watts": self.coordinator.inverter_rated_power_watts,
+            "configured_export_limit_watts": self.coordinator.export_limit_watts,
+        }
+
+    async def async_set_native_value(self, value: float) -> None:
+        requested = max(0, min(self.coordinator.export_limit_watts, round(value)))
+        raw_value = round(
+            requested * 1000 / self.coordinator.inverter_rated_power_watts
+        )
+
+        async with self.coordinator.modbus_lock:
+            started = time.monotonic()
+            if self.coordinator.debug_logging:
+                _LOGGER.debug(
+                    "MODBUS WRITE | FC06 | address=259 | value=%s | watts=%s",
+                    raw_value,
+                    requested,
+                )
+            await self.coordinator.unit.write_register(259, raw_value)
+            await asyncio.sleep(_INTER_REQUEST_DELAY)
+            values = await self.coordinator.unit.read_holding_registers(259, 1)
+            if not values or int(values[0]) != raw_value:
+                raise RuntimeError(
+                    "Export limit write verification failed: "
+                    f"expected {raw_value}, got {values!r}"
+                )
+
+        updated = dict(self.coordinator.data)
+        updated["r259"] = int(values[0])
+        self.coordinator.async_set_updated_data(updated)
+        if self.coordinator.debug_logging:
+            _LOGGER.debug(
+                "MODBUS WRITE SUCCESS | FC06 | address=259 | duration=%.3fs",
+                time.monotonic() - started,
+            )

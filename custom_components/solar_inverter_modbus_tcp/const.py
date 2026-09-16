@@ -7,6 +7,11 @@ CONF_DEBUG_LOGGING = "debug_logging"
 CONF_ENABLE_GENERATOR = "enable_generator"
 CONF_ENABLE_EV_CHARGER = "enable_ev_charger"
 CONF_EV_CHARGERS = "ev_chargers"
+CONF_EXPORT_LIMIT_WATTS = "export_limit_watts"
+CONF_INVERTER_RATED_POWER_WATTS = "inverter_rated_power_watts"
+
+DEFAULT_EXPORT_LIMIT_WATTS = 1000
+DEFAULT_INVERTER_RATED_POWER_WATTS = 10000
 
 EMS_MODES = {
     0: "Self-Use",

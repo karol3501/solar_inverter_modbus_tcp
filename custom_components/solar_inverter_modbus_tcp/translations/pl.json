@@ -55,6 +55,7 @@
       "invalid_host": "Host nie może być pusty.",
       "invalid_port": "Port musi być liczbą od 1 do 65535.",
       "invalid_unit_id": "Unit ID musi być liczbą od 1 do 247.",
+      "export_limit_too_high": "Limit eksportu nie może przekraczać 60% mocy znamionowej falownika.",
       "ev_detection_failed": "Nie można wykryć ładowarek EV. Sprawdź połączenie Modbus i spróbuj ponownie."
     },
     "abort": {
@@ -71,16 +72,19 @@
           "scan_interval": "Interwał odpytywania (sekundy)",
           "enable_generator": "Włącz generator",
           "enable_ev_charger": "Włącz ładowarki EV",
-          "debug_logging": "Włącz logowanie diagnostyczne"
+          "debug_logging": "Włącz logowanie diagnostyczne",
+          "inverter_rated_power_watts": "Moc znamionowa falownika (W)",
+          "export_limit_watts": "Maksymalny limit eksportu (W)"
         },
         "data_description": {
           "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
           "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
           "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
-          "debug_logging": "Zapisuje każde żądanie i odpowiedź Modbus z kodem funkcji, zakresem, wartościami, ponowieniami i czasami odpowiedzi."
+          "debug_logging": "Zapisuje każde żądanie i odpowiedź Modbus z kodem funkcji, zakresem, wartościami, ponowieniami i czasami odpowiedzi.",
+          "inverter_rated_power_watts": "Służy do przeliczenia limitu w watach na procent wymagany przez rejestr Modbus 259.",
+          "export_limit_watts": "Górna granica encji Export Power Limit."
         }
       }
     }
   }
 }
-

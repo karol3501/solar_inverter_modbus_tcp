@@ -14,7 +14,11 @@ from .const import (
     CONF_ENABLE_EV_CHARGER,
     CONF_ENABLE_GENERATOR,
     CONF_EV_CHARGERS,
+    CONF_EXPORT_LIMIT_WATTS,
+    CONF_INVERTER_RATED_POWER_WATTS,
     CONF_SCAN_INTERVAL,
+    DEFAULT_EXPORT_LIMIT_WATTS,
+    DEFAULT_INVERTER_RATED_POWER_WATTS,
     CONF_UNIT_ID,
     DEFAULT_PORT,
     DEFAULT_UNIT_ID,
@@ -316,6 +320,16 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None) -> FlowResult:
         if user_input is not None:
+            export_limit_watts = int(user_input[CONF_EXPORT_LIMIT_WATTS])
+            inverter_rated_power_watts = int(
+                user_input[CONF_INVERTER_RATED_POWER_WATTS]
+            )
+            if export_limit_watts > inverter_rated_power_watts * 0.6:
+                return self.async_show_form(
+                    step_id="init",
+                    data_schema=self._schema(),
+                    errors={CONF_EXPORT_LIMIT_WATTS: "export_limit_too_high"},
+                )
             if user_input.get(CONF_ENABLE_EV_CHARGER, False):
                 try:
                     detected = await self._detect_ev_chargers()
@@ -329,6 +343,8 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
                 user_input[CONF_EV_CHARGERS] = detected
             else:
                 user_input[CONF_EV_CHARGERS] = []
+            user_input[CONF_EXPORT_LIMIT_WATTS] = export_limit_watts
+            user_input[CONF_INVERTER_RATED_POWER_WATTS] = inverter_rated_power_watts
             return self.async_create_entry(title="", data=user_input)
 
         return self.async_show_form(step_id="init", data_schema=self._schema())
@@ -340,6 +356,18 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(CONF_ENABLE_GENERATOR, default=self.config_entry.options.get(CONF_ENABLE_GENERATOR, False)): bool,
                 vol.Optional(CONF_ENABLE_EV_CHARGER, default=self.config_entry.options.get(CONF_ENABLE_EV_CHARGER, False)): bool,
                 vol.Optional(CONF_DEBUG_LOGGING, default=self.config_entry.options.get(CONF_DEBUG_LOGGING, False)): bool,
+                vol.Optional(
+                    CONF_INVERTER_RATED_POWER_WATTS,
+                    default=self.config_entry.options.get(
+                        CONF_INVERTER_RATED_POWER_WATTS,
+                        DEFAULT_INVERTER_RATED_POWER_WATTS,
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=1, max=100000)),
+                vol.Optional(
+                    CONF_EXPORT_LIMIT_WATTS,
+                    default=self.config_entry.options.get(
+                        CONF_EXPORT_LIMIT_WATTS, DEFAULT_EXPORT_LIMIT_WATTS
+                    ),
+                ): vol.All(vol.Coerce(int), vol.Range(min=0, max=100000)),
             }
         )
-

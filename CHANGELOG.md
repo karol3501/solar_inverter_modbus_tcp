@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.8
+
+### Added
+- Added the **Export Power Limit** control in watts for Modbus register `259`. The control converts watts to the percentage required by the inverter and verifies the written value.
+- Added configurable inverter rated power and a configurable maximum export limit in the integration options. Defaults are `10000 W` and `1000 W`.
+
+### Changed
+- Renamed **Total Inverter Power** to **Inverter Active Power** without changing its entity ID or unique ID.
+
 ## 1.0.7
 
 ### Fixed
@@ -7,7 +16,6 @@
 
 ### Added
 - Added transparent Home Assistant branding assets: a compliant square icon and a horizontal integration logo.
-
 
 ## 1.0.6
 
@@ -18,7 +26,6 @@
 - Preserved the raw **BMS Fault Code** as the `raw_code` attribute and standardized link-state labels to `Connected` / `Disconnected`.
 - Updated Number entity state only after a successful Modbus write and prevented invalid EV charger detection when the serial number is absent.
 - Added Polish translations and regression-test workflow coverage.
-
 
 ## 1.0.5
 
