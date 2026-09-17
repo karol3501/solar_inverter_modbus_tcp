@@ -6,8 +6,8 @@ import time
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.const import UnitOfPower
-from homeassistant.helpers.entity import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -67,16 +67,8 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
         ("ems_force_charge_maximum_power", "Force Charge Maximum Power", 4304, 0, 100, 0.1, "%", NumberMode.SLIDER),
         ("ems_force_discharge_soc", "Force Discharge SOC", 4305, 10, 100, 1.0, "%", NumberMode.SLIDER),
         ("ems_force_discharge_maximum_power", "Force Discharge Maximum Power", 4306, 0, 100, 0.1, "%", NumberMode.SLIDER),
-        ("tou_period_1_charge_start_hour", "TOU Period 1 Charge Start Hour", 4449, 0, 23, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_charge_start_minute", "TOU Period 1 Charge Start Minute", 4450, 0, 59, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_charge_end_hour", "TOU Period 1 Charge End Hour", 4451, 0, 23, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_charge_end_minute", "TOU Period 1 Charge End Minute", 4452, 0, 59, 1.0, None, NumberMode.BOX),
         ("tou_period_1_charge_power", "TOU Period 1 Charge Power", 4453, 0, 100, 1.0, "%", NumberMode.SLIDER),
         ("tou_period_1_stop_charge_soc", "TOU Period 1 Stop Charge SOC", 4454, 10, 100, 1.0, "%", NumberMode.SLIDER),
-        ("tou_period_1_discharge_start_hour", "TOU Period 1 Discharge Start Hour", 4455, 0, 23, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_discharge_start_minute", "TOU Period 1 Discharge Start Minute", 4456, 0, 59, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_discharge_end_hour", "TOU Period 1 Discharge End Hour", 4457, 0, 23, 1.0, None, NumberMode.BOX),
-        ("tou_period_1_discharge_end_minute", "TOU Period 1 Discharge End Minute", 4458, 0, 59, 1.0, None, NumberMode.BOX),
         ("tou_period_1_discharge_power", "TOU Period 1 Discharge Power", 4459, 0, 100, 1.0, "%", NumberMode.SLIDER),
         ("tou_period_1_stop_discharge_soc", "TOU Period 1 Stop Discharge SOC", 4460, 10, 100, 1.0, "%", NumberMode.SLIDER),
     ]
@@ -135,7 +127,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
     @property
     def extra_state_attributes(self):
         return {
-            "modbus_address": 4446,
+            "modbus_address": "4446",
             "modbus_role": "high byte" if self._high_byte else "low byte",
         }
 
@@ -216,7 +208,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
     def extra_state_attributes(self):
         raw_value = self.coordinator.data.get("r259")
         return {
-            "modbus_address": 259,
+            "modbus_address": "259",
             "raw_value": int(raw_value) if raw_value is not None else None,
             "percent": int(raw_value) / 10 if raw_value is not None else None,
             "inverter_rated_power_watts": self.coordinator.inverter_rated_power_watts,
@@ -294,7 +286,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
     def extra_state_attributes(self):
         raw_value = self.coordinator.data.get(f"r{self._address}")
         return {
-            "modbus_address": self._address,
+            "modbus_address": str(self._address),
             "raw_value": int(raw_value) if raw_value is not None else None,
         }
 
@@ -380,7 +372,7 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
     @property
     def extra_state_attributes(self):
         raw = self.coordinator.data.get(f"r{self._address}")
-        return {"modbus_address": self._address, "raw_value": int(raw) if raw is not None else None}
+        return {"modbus_address": str(self._address), "raw_value": int(raw) if raw is not None else None}
 
     async def async_set_native_value(self, value: float) -> None:
         requested = max(

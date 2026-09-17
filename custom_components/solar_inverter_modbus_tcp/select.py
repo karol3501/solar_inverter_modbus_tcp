@@ -60,7 +60,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
     @property
     def extra_state_attributes(self):
-        return {"modbus_address": 4300}
+        return {"modbus_address": "4300"}
 
     @property
     def current_option(self) -> str | None:
@@ -131,7 +131,7 @@ class EvChargerSettingSelect(
     def extra_state_attributes(self):
         value = self.coordinator.data.get(f"r{self._address}")
         return {
-            "modbus_address": self._address,
+            "modbus_address": str(self._address),
             "raw_value": int(value) if value is not None else None,
         }
 

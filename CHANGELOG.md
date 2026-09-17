@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0
+
+### Added
+- Added four Time entities for TOU period 1 charge/discharge start and end times. Each accepts an `HH:MM` value, writes both corresponding Modbus registers, and verifies the inverter response.
+
+### Changed
+- Renamed **Total Grid Power** to **Grid Active Power** and migrated its default entity ID to `sensor.solar_inverter_grid_active_power` without changing its unique ID.
+- Migrated detected EV Charger sensor entity IDs to stable names such as `sensor.ev_charger1_connection_status`; charger serial numbers remain in the device name only.
+- Changed all displayed Modbus address attributes to unformatted text, for example `2133` instead of `2,133`.
+- Renamed the Battery/Grid-to-Load energy entities and removed the duplicate **Energy From PV Today** and **Energy From PV Total** entities.
+- Replaced the eight TOU hour/minute Number entities with four Time entities and hid the superseded Number entities from the integration.
+
 ## 1.0.11
 
 ### Added
