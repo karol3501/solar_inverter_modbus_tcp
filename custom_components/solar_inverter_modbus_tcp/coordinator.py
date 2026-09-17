@@ -66,18 +66,19 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         ev_chargers: list[int] | tuple[int, ...] | None = None,
         export_limit_watts: int = 1000,
         inverter_rated_power_watts: int = 10000,
-        ev_charger_1_rated_power_kw: float = 11.0,
-        ev_charger_2_rated_power_kw: float = 11.0,
+        ev_charger_rated_power_kw: float = 11.0,
     ) -> None:
         self.unit = unit
         self.entry_id = entry_id
         self.debug_logging = debug_logging
         self.enable_generator = enable_generator
         self.enable_ev_charger = enable_ev_charger
-        self.ev_chargers = None if ev_chargers is None else tuple(int(charger) for charger in ev_chargers)
+        self.ev_chargers = None if ev_chargers is None else tuple(
+            charger for charger in (int(charger) for charger in ev_chargers) if charger == 1
+        )
         self.export_limit_watts = int(export_limit_watts)
         self.inverter_rated_power_watts = int(inverter_rated_power_watts)
-        self.ev_charger_rated_power_kw = {1: float(ev_charger_1_rated_power_kw), 2: float(ev_charger_2_rated_power_kw)}
+        self.ev_charger_rated_power_kw = float(ev_charger_rated_power_kw)
         self.modbus_lock = asyncio.Lock()
         self._last_data: dict[str, object] = {}
         self._successful_requests = 0
@@ -148,14 +149,14 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
         if self.enable_ev_charger:
             if self.ev_chargers is None:
-                for charger, address in ((1, 3200), (2, 3250)):
+                for charger, address in ((1, 3200),):
                     try:
                         values = await self._read_input(address, 1)
                         _put_block(self._last_data, values, address)
                     except Exception as err:  # noqa: BLE001
                         _LOGGER.warning("EV CHARGER DETECTION FAILED | charger=%s | address=%s | error=%s", charger, address, err)
                 detected = []
-                for charger, base_address in ((1, 3200), (2, 3250)):
+                for charger, base_address in ((1, 3200),):
                     serial_words = [
                         self._last_data.get(f"r{base_address + offset}")
                         for offset in range(2, 6)
@@ -174,13 +175,11 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             for charger in self.ev_chargers:
                 if charger == 1:
                     input_blocks.append((3200, 25))
-                elif charger == 2:
-                    input_blocks.append((3250, 25))
 
         holding_blocks = [(259, 1), (306, 4), (4300, 8), (4446, 15)]
         if self.enable_ev_charger:
             for charger in self.ev_chargers or ():
-                holding_blocks.append((4700 if charger == 1 else 4750, 5))
+                holding_blocks.append((4700, 5))
         total_requests = len(input_blocks) + len(holding_blocks)
         data: dict[str, object] = self._last_data.copy()
         self._successful_requests = 0
@@ -237,4 +236,3 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             data["peak_meter_reserved_soc"] = int(data["r4446"]) % 256
 
         return data
-

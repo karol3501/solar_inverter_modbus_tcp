@@ -13,16 +13,15 @@ from .const import (
     CONF_DEBUG_LOGGING,
     CONF_ENABLE_EV_CHARGER,
     CONF_ENABLE_GENERATOR,
-    CONF_EV_CHARGER_1_RATED_POWER_KW,
-    CONF_EV_CHARGER_2_RATED_POWER_KW,
+    CONF_EV_CHARGER_RATED_POWER_KW,
     CONF_EV_CHARGERS,
     CONF_EXPORT_LIMIT_WATTS,
     CONF_INVERTER_RATED_POWER_WATTS,
     CONF_SCAN_INTERVAL,
-    DEFAULT_EXPORT_LIMIT_WATTS,
-    DEFAULT_EV_CHARGER_RATED_POWER_KW,
-    DEFAULT_INVERTER_RATED_POWER_WATTS,
     CONF_UNIT_ID,
+    DEFAULT_EV_CHARGER_RATED_POWER_KW,
+    DEFAULT_EXPORT_LIMIT_WATTS,
+    DEFAULT_INVERTER_RATED_POWER_WATTS,
     DEFAULT_PORT,
     DEFAULT_UNIT_ID,
     DOMAIN,
@@ -42,7 +41,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         params = ModbusTcpParams(host=host, port=port)
         detected: list[int] = []
         async with async_get_temporary_unit(self.hass, params, unit_id) as unit:
-            for charger, base_address in ((1, 3200), (2, 3250)):
+            for charger, base_address in ((1, 3200),):
                 try:
                     status = await unit.read_input_registers(base_address, 1)
                     address = await unit.read_input_registers(base_address + 1, 1)
@@ -71,7 +70,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if not chargers:
             detected = "No EV charger detected"
         else:
-            detected = ", ".join(f"EV Charger {charger}" for charger in chargers)
+            detected = "EV Charger"
         return {"detected_ev_chargers": detected}
 
     async def async_step_user(self, user_input=None) -> FlowResult:
@@ -206,24 +205,26 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                 )
             )
-            ev_charger_1_rated_power_kw = float(
+            ev_charger_rated_power_kw = float(
                 user_input.get(
-                    CONF_EV_CHARGER_1_RATED_POWER_KW,
+                    CONF_EV_CHARGER_RATED_POWER_KW,
                     current_options.get(
-                        CONF_EV_CHARGER_1_RATED_POWER_KW,
-                        DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                        CONF_EV_CHARGER_RATED_POWER_KW,
+                        current_options.get(
+                            "ev_charger_1_rated_power_kw",
+                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                        ),
                     ),
                 )
             )
-            ev_charger_2_rated_power_kw = float(
-                user_input.get(
-                    CONF_EV_CHARGER_2_RATED_POWER_KW,
+            # Existing entries stored this value under the old single-charger key.
+            if CONF_EV_CHARGER_RATED_POWER_KW not in user_input:
+                ev_charger_rated_power_kw = float(
                     current_options.get(
-                        CONF_EV_CHARGER_2_RATED_POWER_KW,
+                        "ev_charger_1_rated_power_kw",
                         DEFAULT_EV_CHARGER_RATED_POWER_KW,
-                    ),
+                    )
                 )
-            )
 
             if not host:
                 errors[CONF_HOST] = "invalid_host"
@@ -269,8 +270,7 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         CONF_ENABLE_EV_CHARGER: bool(user_input.get(CONF_ENABLE_EV_CHARGER, current_options.get(CONF_ENABLE_EV_CHARGER, False))),
                         CONF_INVERTER_RATED_POWER_WATTS: inverter_rated_power_watts,
                         CONF_EXPORT_LIMIT_WATTS: export_limit_watts,
-                        CONF_EV_CHARGER_1_RATED_POWER_KW: ev_charger_1_rated_power_kw,
-                        CONF_EV_CHARGER_2_RATED_POWER_KW: ev_charger_2_rated_power_kw,
+                        CONF_EV_CHARGER_RATED_POWER_KW: ev_charger_rated_power_kw,
                         CONF_EV_CHARGERS: [],
                     }
                     data_updates = {
@@ -331,17 +331,13 @@ class SolarInverterConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             schema.update(
                 {
                     vol.Optional(
-                        CONF_EV_CHARGER_1_RATED_POWER_KW,
+                        CONF_EV_CHARGER_RATED_POWER_KW,
                         default=current_options.get(
-                            CONF_EV_CHARGER_1_RATED_POWER_KW,
-                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
-                        ),
-                    ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=22.0)),
-                    vol.Optional(
-                        CONF_EV_CHARGER_2_RATED_POWER_KW,
-                        default=current_options.get(
-                            CONF_EV_CHARGER_2_RATED_POWER_KW,
-                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                            CONF_EV_CHARGER_RATED_POWER_KW,
+                            current_options.get(
+                                "ev_charger_1_rated_power_kw",
+                                DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                            ),
                         ),
                     ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=22.0)),
                 }
@@ -368,7 +364,7 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
         async with async_get_temporary_unit(
             self.hass, params, self.config_entry.data[CONF_UNIT_ID]
         ) as unit:
-            for charger, base_address in ((1, 3200), (2, 3250)):
+            for charger, base_address in ((1, 3200),):
                 try:
                     status = await unit.read_input_registers(base_address, 1)
                     address = await unit.read_input_registers(base_address + 1, 1)
@@ -420,21 +416,15 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
                 user_input[CONF_EV_CHARGERS] = []
             user_input[CONF_EXPORT_LIMIT_WATTS] = export_limit_watts
             user_input[CONF_INVERTER_RATED_POWER_WATTS] = inverter_rated_power_watts
-            user_input[CONF_EV_CHARGER_1_RATED_POWER_KW] = float(
+            user_input[CONF_EV_CHARGER_RATED_POWER_KW] = float(
                 user_input.get(
-                    CONF_EV_CHARGER_1_RATED_POWER_KW,
+                    CONF_EV_CHARGER_RATED_POWER_KW,
                     self.config_entry.options.get(
-                        CONF_EV_CHARGER_1_RATED_POWER_KW,
-                        DEFAULT_EV_CHARGER_RATED_POWER_KW,
-                    ),
-                )
-            )
-            user_input[CONF_EV_CHARGER_2_RATED_POWER_KW] = float(
-                user_input.get(
-                    CONF_EV_CHARGER_2_RATED_POWER_KW,
-                    self.config_entry.options.get(
-                        CONF_EV_CHARGER_2_RATED_POWER_KW,
-                        DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                        CONF_EV_CHARGER_RATED_POWER_KW,
+                        self.config_entry.options.get(
+                            "ev_charger_1_rated_power_kw",
+                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                        ),
                     ),
                 )
             )
@@ -466,20 +456,15 @@ class SolarInverterOptionsFlow(config_entries.OptionsFlow):
             schema.update(
                 {
                     vol.Optional(
-                        CONF_EV_CHARGER_1_RATED_POWER_KW,
+                        CONF_EV_CHARGER_RATED_POWER_KW,
                         default=self.config_entry.options.get(
-                            CONF_EV_CHARGER_1_RATED_POWER_KW,
-                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
-                        ),
-                    ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=22.0)),
-                    vol.Optional(
-                        CONF_EV_CHARGER_2_RATED_POWER_KW,
-                        default=self.config_entry.options.get(
-                            CONF_EV_CHARGER_2_RATED_POWER_KW,
-                            DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                            CONF_EV_CHARGER_RATED_POWER_KW,
+                            self.config_entry.options.get(
+                                "ev_charger_1_rated_power_kw",
+                                DEFAULT_EV_CHARGER_RATED_POWER_KW,
+                            ),
                         ),
                     ): vol.All(vol.Coerce(float), vol.Range(min=1.0, max=22.0)),
                 }
             )
         return vol.Schema(schema)
-

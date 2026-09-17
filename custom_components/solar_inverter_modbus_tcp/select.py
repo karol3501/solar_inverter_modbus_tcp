@@ -22,13 +22,12 @@ NAME_TO_VALUE = {name: value for value, name in EMS_MODES.items()}
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator: SolarInverterCoordinator = entry.runtime_data
     entities = [SolarInverterEmsSelect(coordinator)]
-    for charger in coordinator.ev_chargers or ():
-        address = 4700 if charger == 1 else 4750
+    if 1 in coordinator.ev_chargers or ():
+        address = 4700
         entities.extend(
             (
                 EvChargerSettingSelect(
                     coordinator,
-                    charger,
                     "charging_mode",
                     "Charging Mode",
                     address + 2,
@@ -36,7 +35,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
                 ),
                 EvChargerSettingSelect(
                     coordinator,
-                    charger,
                     "green_power_mode",
                     "Green Power Mode",
                     address + 3,
@@ -108,7 +106,6 @@ class EvChargerSettingSelect(
     def __init__(
         self,
         coordinator: SolarInverterCoordinator,
-        charger: int,
         data_key: str,
         name: str,
         address: int,
@@ -123,9 +120,9 @@ class EvChargerSettingSelect(
         self._attr_name = name
         self._attr_options = list(option_to_value)
         self._attr_unique_id = (
-            f"{DOMAIN}_{coordinator.entry_id}_ev_charger_{charger}_{data_key}"
+            f"{DOMAIN}_{coordinator.entry_id}_ev_charger_{data_key}"
         )
-        self._attr_device_info = ev_charger_device_info(coordinator, charger)
+        self._attr_device_info = ev_charger_device_info(coordinator)
 
     @property
     def extra_state_attributes(self):
@@ -170,4 +167,3 @@ class EvChargerSettingSelect(
                 self._address,
                 time.monotonic() - started,
             )
-

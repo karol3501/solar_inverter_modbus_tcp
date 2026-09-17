@@ -18,16 +18,14 @@ def inverter_device_info(coordinator: SolarInverterCoordinator) -> DeviceInfo:
     )
 
 
-def ev_charger_device_info(
-    coordinator: SolarInverterCoordinator, charger: int
-) -> DeviceInfo:
+def ev_charger_device_info(coordinator: SolarInverterCoordinator) -> DeviceInfo:
     """Return the device for a detected EV charger."""
-    serial_address = 3202 if charger == 1 else 3252
+    serial_address = 3202
     serial_words = [
         coordinator.data.get(f"r{serial_address + offset}") for offset in range(4)
     ]
     if any(word is None for word in serial_words):
-        raise ValueError(f"EV charger {charger} does not have a serial number")
+        raise ValueError("EV charger does not have a serial number")
 
     serial_number = str(
         (int(serial_words[0]) << 48)
@@ -41,4 +39,3 @@ def ev_charger_device_info(
         manufacturer="Hoymiles",
         model="EV Charger",
     )
-

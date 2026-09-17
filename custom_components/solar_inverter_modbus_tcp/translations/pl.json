@@ -10,7 +10,7 @@
           "unit_id": "Modbus Unit ID",
           "scan_interval": "Interwał odpytywania (sekundy)",
           "enable_generator": "Włącz generator",
-          "enable_ev_charger": "Włącz ładowarki EV",
+          "enable_ev_charger": "Włącz ładowarkę EV",
           "debug_logging": "Włącz logowanie diagnostyczne"
         },
         "data_description": {
@@ -19,13 +19,13 @@
           "unit_id": "Modbus Unit ID, zwykle 1.",
           "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
           "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
-          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "enable_ev_charger": "Wykrywa podłączoną ładowarkę EV i tworzy jej encje tylko wtedy, gdy jest online.",
           "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi."
         }
       },
       "ev_detection": {
         "title": "Wykrywanie ładowarek EV",
-        "description": "Wykryte ładowarki EV: {detected_ev_chargers}. Encje zostaną utworzone tylko dla wykrytych ładowarek."
+        "description": "Wykryta ładowarka EV: {detected_ev_chargers}. Encje zostaną utworzone tylko po jej wykryciu."
       },
       "reconfigure": {
         "title": "Zmień konfigurację falownika solarnego",
@@ -36,12 +36,11 @@
           "unit_id": "Modbus Unit ID",
           "scan_interval": "Interwał odpytywania (sekundy)",
           "enable_generator": "Włącz generator",
-          "enable_ev_charger": "Włącz ładowarki EV",
+          "enable_ev_charger": "Włącz ładowarkę EV",
           "debug_logging": "Włącz logowanie diagnostyczne",
           "inverter_rated_power_watts": "Moc znamionowa falownika (W)",
           "export_limit_watts": "Maksymalny limit eksportu (W)",
-          "ev_charger_1_rated_power_kw": "Moc znamionowa ładowarki EV 1 (kW)",
-          "ev_charger_2_rated_power_kw": "Moc znamionowa ładowarki EV 2 (kW)"
+          "ev_charger_rated_power_kw": "Moc znamionowa ładowarki EV (kW)"
         },
         "data_description": {
           "host": "Adres IP lub nazwa hosta falownika.",
@@ -49,12 +48,11 @@
           "unit_id": "Modbus Unit ID, zwykle 1.",
           "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
           "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
-          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "enable_ev_charger": "Wykrywa podłączoną ładowarkę EV i tworzy jej encje tylko wtedy, gdy jest online.",
           "debug_logging": "Zapisuje adresy Modbus, zakresy odczytu, wartości, ponowienia i czasy odpowiedzi.",
           "inverter_rated_power_watts": "Służy do przeliczenia limitu w watach na procent wymagany przez rejestr Modbus 259.",
           "export_limit_watts": "Górna granica encji Export Power Limit.",
-          "ev_charger_1_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV 1.",
-          "ev_charger_2_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV 2."
+          "ev_charger_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV."
         }
       }
     },
@@ -79,25 +77,22 @@
         "data": {
           "scan_interval": "Interwał odpytywania (sekundy)",
           "enable_generator": "Włącz generator",
-          "enable_ev_charger": "Włącz ładowarki EV",
+          "enable_ev_charger": "Włącz ładowarkę EV",
           "debug_logging": "Włącz logowanie diagnostyczne",
           "inverter_rated_power_watts": "Moc znamionowa falownika (W)",
           "export_limit_watts": "Maksymalny limit eksportu (W)",
-          "ev_charger_1_rated_power_kw": "Moc znamionowa ładowarki EV 1 (kW)",
-          "ev_charger_2_rated_power_kw": "Moc znamionowa ładowarki EV 2 (kW)"
+          "ev_charger_rated_power_kw": "Moc znamionowa ładowarki EV (kW)"
         },
         "data_description": {
           "scan_interval": "Jak często falownik ma być odpytywany o nowe dane.",
           "enable_generator": "Tworzy sensory generatora i odczytuje jego rejestry.",
-          "enable_ev_charger": "Wykrywa podłączone ładowarki EV i tworzy encje tylko dla wykrytych ładowarek.",
+          "enable_ev_charger": "Wykrywa podłączoną ładowarkę EV i tworzy jej encje tylko wtedy, gdy jest online.",
           "debug_logging": "Zapisuje każde żądanie i odpowiedź Modbus z kodem funkcji, zakresem, wartościami, ponowieniami i czasami odpowiedzi.",
           "inverter_rated_power_watts": "Służy do przeliczenia limitu w watach na procent wymagany przez rejestr Modbus 259.",
           "export_limit_watts": "Górna granica encji Export Power Limit.",
-          "ev_charger_1_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV 1.",
-          "ev_charger_2_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV 2."
+          "ev_charger_rated_power_kw": "Maksymalna moc używana przez encje sterujące ładowarką EV."
         }
       }
     }
   }
 }
-

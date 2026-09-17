@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1
+
+### Fixed
+- Marked **EV Charger Output Energy** as a cumulative energy counter, removing the Home Assistant `last_reset` warning and enabling correct energy statistics.
+
+### Changed
+- Simplified EV support to one **EV Charger**. Removed second-charger detection, telemetry and controls.
+- Renamed the remaining charger settings and entities to remove `1`, with automatic migration of existing entity IDs and control identities.
+- Retired second-charger entities are disabled automatically, preserving their historical data.
+
 ## 1.1.0
 
 ### Added
@@ -283,4 +293,3 @@
 ### Fixed
 - Added a shared Modbus I/O lock so coordinator polling and write operations cannot overlap on the same TCP connection.
 - Added controlled retry handling for intermittent FC03/FC04 timeouts and connection drops.
-

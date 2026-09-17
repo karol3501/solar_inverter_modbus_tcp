@@ -73,14 +73,13 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
         ("tou_period_1_stop_discharge_soc", "TOU Period 1 Stop Discharge SOC", 4460, 10, 100, 1.0, "%", NumberMode.SLIDER),
     ]
     entities.extend(EmsSettingNumber(coordinator, *setting) for setting in ems_settings)
-    for charger in coordinator.ev_chargers or ():
-        address = 4700 if charger == 1 else 4750
-        rated_power_kw = coordinator.ev_charger_rated_power_kw[charger]
+    if 1 in coordinator.ev_chargers or ():
+        address = 4700
+        rated_power_kw = coordinator.ev_charger_rated_power_kw
         entities.extend(
             (
                 EvChargerPowerNumber(
                     coordinator,
-                    charger,
                     "charging_power_setting",
                     "Charging Power Setting",
                     address,
@@ -88,7 +87,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
                 ),
                 EvChargerPowerNumber(
                     coordinator,
-                    charger,
                     "offline_charging_power",
                     "Offline Charging Power",
                     address + 1,
@@ -96,7 +94,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
                 ),
                 EvChargerPowerNumber(
                     coordinator,
-                    charger,
                     "max_charging_power_from_grid",
                     "Max Charging Power from Grid",
                     address + 4,
@@ -401,7 +398,6 @@ class EvChargerPowerNumber(EmsSettingNumber):
     def __init__(
         self,
         coordinator: SolarInverterCoordinator,
-        charger: int,
         data_key: str,
         name: str,
         address: int,
@@ -409,7 +405,7 @@ class EvChargerPowerNumber(EmsSettingNumber):
     ) -> None:
         super().__init__(
             coordinator,
-            f"ev_charger_{charger}_{data_key}",
+            f"ev_charger_{data_key}",
             name,
             address,
             0,
@@ -418,5 +414,4 @@ class EvChargerPowerNumber(EmsSettingNumber):
             "kW",
             NumberMode.SLIDER,
         )
-        self._attr_device_info = ev_charger_device_info(coordinator, charger)
-
+        self._attr_device_info = ev_charger_device_info(coordinator)

@@ -53,9 +53,7 @@ DESCRIPTION = [
 
 GEN_DESCRIPTION = [d("Generator Voltage L1", "r103", 0.1, "V", "voltage", "measurement"), d("Generator Voltage L2", "r104", 0.1, "V", "voltage", "measurement"), d("Generator Voltage L3", "r105", 0.1, "V", "voltage", "measurement"), d("Generator Current L1", "r106", 0.01, "A", "current", "measurement", "int16"), d("Generator Current L2", "r107", 0.01, "A", "current", "measurement", "int16"), d("Generator Current L3", "r108", 0.01, "A", "current", "measurement", "int16"), d("Generator Active Power L1", "r109", 1, "W", "power", "measurement", "int16"), d("Generator Active Power L2", "r110", 1, "W", "power", "measurement", "int16"), d("Generator Active Power L3", "r111", 1, "W", "power", "measurement", "int16"), d("Generator Energy Today", "r2135", 0.1, "kWh", "energy", "total_increasing")]
 
-EV_CHARGER_1_DESCRIPTION = [d("EV Charger 1 Connection Status", "r3200"), d("EV Charger 1 Communication Address", "r3201"), d("EV Charger 1 Serial Number", "r3202", word_count=4), d("EV Charger 1 Start Mode", "r3206"), d("EV Charger 1 Bill Start Mode", "r3207"), d("EV Charger 1 Bill End Mode", "r3208"), d("EV Charger 1 Software Version", "r3209"), d("EV Charger 1 Type", "r3210"), d("EV Charger 1 Minimum Charge Power", "r3211", 0.1, "kW", "power", "measurement"), d("EV Charger 1 Status", "r3212"), d("EV Charger 1 Error Code", "r3213"), d("EV Charger 1 Rated Power", "r3214"), d("EV Charger 1 Real Output Power", "r3215"), d("EV Charger 1 Output Percentage Set", "r3216"), d("EV Charger 1 Offline Charge Power Limit", "r3217"), d("EV Charger 1 Output Power Set", "r3218"), d("EV Charger 1 Gun Status", "r3219"), d("EV Charger 1 Output Voltage", "r3220", 0.1, "V", "voltage", "measurement"), d("EV Charger 1 Output Current", "r3221", 0.1, "A", "current", "measurement"), d("EV Charger 1 Output Power", "r3222", 0.1, "kW", "power", "measurement"), d("EV Charger 1 Output Time", "r3223", 1, "min", None, "measurement"), d("EV Charger 1 Output Energy", "r3224", 0.1, "kWh", "energy", "measurement")]
-
-EV_CHARGER_2_DESCRIPTION = [d("EV Charger 2 Connection Status", "r3250"), d("EV Charger 2 Communication Address", "r3251"), d("EV Charger 2 Serial Number", "r3252", word_count=4), d("EV Charger 2 Start Mode", "r3256"), d("EV Charger 2 Bill Start Mode", "r3257"), d("EV Charger 2 Bill End Mode", "r3258"), d("EV Charger 2 Software Version", "r3259"), d("EV Charger 2 Type", "r3260"), d("EV Charger 2 Minimum Charge Power", "r3261", 0.1, "kW", "power", "measurement"), d("EV Charger 2 Status", "r3262"), d("EV Charger 2 Error Code", "r3263"), d("EV Charger 2 Rated Power", "r3264"), d("EV Charger 2 Real Output Power", "r3265"), d("EV Charger 2 Output Percentage Set", "r3266"), d("EV Charger 2 Offline Charge Power Limit", "r3267"), d("EV Charger 2 Output Power Set", "r3268"), d("EV Charger 2 Gun Status", "r3269"), d("EV Charger 2 Output Voltage", "r3270", 0.1, "V", "voltage", "measurement"), d("EV Charger 2 Output Current", "r3271", 0.1, "A", "current", "measurement"), d("EV Charger 2 Output Power", "r3272", 0.1, "kW", "power", "measurement"), d("EV Charger 2 Output Time", "r3273", 1, "min", None, "measurement"), d("EV Charger 2 Output Energy", "r3274", 0.1, "kWh", "energy", "measurement")]
+EV_CHARGER_DESCRIPTION = [d("EV Charger Connection Status", "r3200"), d("EV Charger Communication Address", "r3201"), d("EV Charger Serial Number", "r3202", word_count=4), d("EV Charger Start Mode", "r3206"), d("EV Charger Bill Start Mode", "r3207"), d("EV Charger Bill End Mode", "r3208"), d("EV Charger Software Version", "r3209"), d("EV Charger Type", "r3210"), d("EV Charger Minimum Charge Power", "r3211", 0.1, "kW", "power", "measurement"), d("EV Charger Status", "r3212"), d("EV Charger Error Code", "r3213"), d("EV Charger Rated Power", "r3214"), d("EV Charger Real Output Power", "r3215"), d("EV Charger Output Percentage Set", "r3216"), d("EV Charger Offline Charge Power Limit", "r3217"), d("EV Charger Output Power Set", "r3218"), d("EV Charger Gun Status", "r3219"), d("EV Charger Output Voltage", "r3220", 0.1, "V", "voltage", "measurement"), d("EV Charger Output Current", "r3221", 0.1, "A", "current", "measurement"), d("EV Charger Output Power", "r3222", 0.1, "kW", "power", "measurement"), d("EV Charger Output Time", "r3223", 1, "min", None, "measurement"), d("EV Charger Output Energy", "r3224", 0.1, "kWh", "energy", "total_increasing")]
 
 DERIVED = [("work_status_text", "Work Status", None, None, None, ()), ("total_pv_power", "Total PV Power", "W", "power", "measurement", ("PV1 Power", "PV2 Power", "PV3 Power", "PV4 Power")), ("total_grid_power", "Grid Active Power", "W", "power", "measurement", ("Grid Active Power L1", "Grid Active Power L2", "Grid Active Power L3")), ("total_inverter_power", "Inverter Active Power", "W", "power", "measurement", ("Inverter Active Power L1", "Inverter Active Power L2", "Inverter Active Power L3")), ("backup_active_power", "Backup Active Power", "W", "power", "measurement", ("Backup Active Power A", "Backup Active Power B", "Backup Active Power C")), ("load_power", "Load Power", "W", "power", "measurement", ("Inverter Active Power", "Grid Active Power"))]
 
@@ -70,16 +68,10 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
     ]
     if coordinator.enable_ev_charger:
         if 1 in coordinator.ev_chargers:
-            device_info = ev_charger_device_info(coordinator, 1)
+            device_info = ev_charger_device_info(coordinator)
             entities.extend(
                 SolarInverterSensor(coordinator, description, device_info)
-                for description in EV_CHARGER_1_DESCRIPTION
-            )
-        if 2 in coordinator.ev_chargers:
-            device_info = ev_charger_device_info(coordinator, 2)
-            entities.extend(
-                SolarInverterSensor(coordinator, description, device_info)
-                for description in EV_CHARGER_2_DESCRIPTION
+                for description in EV_CHARGER_DESCRIPTION
             )
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
@@ -229,4 +221,3 @@ class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], se
     @property
     def extra_state_attributes(self):
         return {"modbus_address": "4300"}
-

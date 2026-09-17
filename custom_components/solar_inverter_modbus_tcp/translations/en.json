@@ -10,7 +10,7 @@
           "unit_id": "Modbus Unit ID",
           "scan_interval": "Polling interval (seconds)",
           "enable_generator": "Enable generator",
-          "enable_ev_charger": "Enable EV chargers",
+          "enable_ev_charger": "Enable EV charger",
           "debug_logging": "Enable debug logging"
         },
         "data_description": {
@@ -19,13 +19,13 @@
           "unit_id": "Modbus Unit ID, normally 1.",
           "scan_interval": "How often the inverter is polled for new data.",
           "enable_generator": "Create generator sensors and poll generator registers.",
-          "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
+          "enable_ev_charger": "Detect the connected EV charger and create its sensors only when it is online.",
           "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings."
         }
       },
       "ev_detection": {
         "title": "EV charger detection",
-        "description": "Detected EV chargers: {detected_ev_chargers}. Only detected chargers will have entities created."
+        "description": "Detected EV charger: {detected_ev_chargers}. Entities are created only when it is detected."
       },
       "reconfigure": {
         "title": "Reconfigure solar inverter",
@@ -36,12 +36,11 @@
           "unit_id": "Modbus Unit ID",
           "scan_interval": "Polling interval (seconds)",
           "enable_generator": "Enable generator",
-          "enable_ev_charger": "Enable EV chargers",
+          "enable_ev_charger": "Enable EV charger",
           "debug_logging": "Enable debug logging",
           "inverter_rated_power_watts": "Inverter rated power (W)",
           "export_limit_watts": "Maximum export limit (W)",
-          "ev_charger_1_rated_power_kw": "EV Charger 1 rated power (kW)",
-          "ev_charger_2_rated_power_kw": "EV Charger 2 rated power (kW)"
+          "ev_charger_rated_power_kw": "EV Charger rated power (kW)"
         },
         "data_description": {
           "host": "IP address or hostname of the inverter.",
@@ -49,12 +48,11 @@
           "unit_id": "Modbus Unit ID, normally 1.",
           "scan_interval": "How often the inverter is polled for new data.",
           "enable_generator": "Create generator sensors and poll generator registers.",
-          "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
+          "enable_ev_charger": "Detect the connected EV charger and create its sensors only when it is online.",
           "debug_logging": "Log Modbus addresses, request ranges, returned register values, retries and timings.",
           "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
           "export_limit_watts": "Upper limit of the Export Power Limit entity.",
-          "ev_charger_1_rated_power_kw": "Maximum power used by EV Charger 1 control entities.",
-          "ev_charger_2_rated_power_kw": "Maximum power used by EV Charger 2 control entities."
+          "ev_charger_rated_power_kw": "Maximum power used by EV Charger control entities."
         }
       }
     },
@@ -79,25 +77,22 @@
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "enable_generator": "Enable generator",
-          "enable_ev_charger": "Enable EV chargers",
+          "enable_ev_charger": "Enable EV charger",
           "debug_logging": "Enable debug logging",
           "inverter_rated_power_watts": "Inverter rated power (W)",
           "export_limit_watts": "Maximum export limit (W)",
-          "ev_charger_1_rated_power_kw": "EV Charger 1 rated power (kW)",
-          "ev_charger_2_rated_power_kw": "EV Charger 2 rated power (kW)"
+          "ev_charger_rated_power_kw": "EV Charger rated power (kW)"
         },
         "data_description": {
           "scan_interval": "How often the inverter is polled for new data.",
           "enable_generator": "Create generator sensors and poll generator registers.",
-          "enable_ev_charger": "Detect connected EV chargers and create sensors only for chargers that are online.",
+          "enable_ev_charger": "Detect the connected EV charger and create its sensors only when it is online.",
           "debug_logging": "Log every Modbus request and response with function code, address/range, values, retry and timing information.",
           "inverter_rated_power_watts": "Used to convert the watt limit into the percentage required by Modbus register 259.",
           "export_limit_watts": "Upper limit of the Export Power Limit entity.",
-          "ev_charger_1_rated_power_kw": "Maximum power used by EV Charger 1 control entities.",
-          "ev_charger_2_rated_power_kw": "Maximum power used by EV Charger 2 control entities."
+          "ev_charger_rated_power_kw": "Maximum power used by EV Charger control entities."
         }
       }
     }
   }
 }
-
