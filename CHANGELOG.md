@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+### Fixed
+- Prevented corrupted 32-bit Modbus values after a temporary block-read failure by retaining the raw 16-bit register words separately.
+- Prevented erroneous power and energy spikes from affecting Home Assistant history and Energy Dashboard statistics.
+
 ## 1.1.1
 
 ### Fixed

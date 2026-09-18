@@ -24,12 +24,12 @@ def _i16(value: int) -> int:
 
 
 def _i32(hi: int, lo: int) -> int:
-    raw = (int(hi) << 16) | int(lo)
+    raw = ((int(hi) & 0xFFFF) << 16) | (int(lo) & 0xFFFF)
     return raw - 0x100000000 if raw & 0x80000000 else raw
 
 
 def _u32(hi: int, lo: int) -> int:
-    return (int(hi) << 16) | int(lo)
+    return ((int(hi) & 0xFFFF) << 16) | (int(lo) & 0xFFFF)
 
 
 def _u64(w0: int, w1: int, w2: int, w3: int) -> int:
@@ -43,7 +43,9 @@ def _u64(w0: int, w1: int, w2: int, w3: int) -> int:
 
 def _put_block(data: dict[str, object], values: list[int], start: int) -> None:
     for offset, value in enumerate(values):
-        data[f"r{start + offset}"] = int(value)
+        key = f"r{start + offset}"
+        data[f"{key}_raw"] = int(value)
+        data[key] = int(value)
 
 
 def _is_connection_error(error: Exception) -> bool:
@@ -205,8 +207,8 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         if self._successful_requests == 0:
             raise UpdateFailed(f"Modbus telemetry update failed: all {total_requests} requests failed")
 
-        if "r21" in data and "r22" in data:
-            data["r21"] = _u32(data["r21"], data["r22"])
+        if "r21_raw" in data and "r22_raw" in data:
+            data["r21"] = _u32(data["r21_raw"], data["r22_raw"])
 
         for key, high_key, low_key in (
             ("sw_fault", "r19", "r20"),
@@ -214,8 +216,10 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (1078, 1080, 1082)),
             *((f"r{x}", f"r{x}", f"r{x + 1}") for x in (2000, 2022, 2024, 2026, 2028, 2030, 2040, 2048, 2056, 2064, 2066, 2068)),
         ):
-            if high_key in data and low_key in data:
-                data[key] = _i32(data[high_key], data[low_key])
+            raw_high_key = f"{high_key}_raw"
+            raw_low_key = f"{low_key}_raw"
+            if raw_high_key in data and raw_low_key in data:
+                data[key] = _i32(data[raw_high_key], data[raw_low_key])
 
         if all(f"r{x}" in data for x in (29, 32, 35, 38)):
             data["total_pv_power"] = sum(int(data[f"r{x}"]) for x in (29, 32, 35, 38))
