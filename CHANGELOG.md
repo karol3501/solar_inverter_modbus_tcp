@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0
+
+### Testing release
+- This release is intended for testing with real Hoymiles inverters. Please monitor the Home Assistant log and report any Modbus communication problems.
+
+### Changed
+- Control entities update their displayed state in Home Assistant immediately after a requested change: Number, Select and TOU Time controls.
+
+### Fixed
+- Retry Modbus control writes once after a connection timeout or connection loss, reconnecting before the retry.
+- Restore the previous Home Assistant value if the requested write or verification ultimately fails.
+
 ## 1.1.2
 
 ### Fixed

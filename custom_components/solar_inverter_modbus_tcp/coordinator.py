@@ -14,6 +14,7 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 _READ_RETRIES = 2
+_WRITE_RETRIES = 2
 _RETRY_DELAY = 0.5
 _INTER_REQUEST_DELAY = 0.25
 
@@ -127,6 +128,70 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
 
     async def _read_holding(self, address: int, count: int) -> list[int]:
         return await self._read("FC03", address, count)
+
+    async def async_write_register(self, address: int, value: int) -> None:
+        """Write one holding register and recover once from a broken connection."""
+        last_error: Exception | None = None
+        for attempt in range(1, _WRITE_RETRIES + 1):
+            try:
+                await self.unit.write_register(address, value)
+                return
+            except Exception as err:  # noqa: BLE001
+                last_error = err
+                if not _is_connection_error(err):
+                    raise
+                try:
+                    await self.unit.disconnect()
+                except Exception as disconnect_err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "MODBUS DISCONNECT FAILED AFTER WRITE | error=%s",
+                        disconnect_err,
+                    )
+                if attempt < _WRITE_RETRIES:
+                    _LOGGER.warning(
+                        "MODBUS WRITE RETRY | address=%s | value=%s | "
+                        "attempt=%s/%s | error=%s",
+                        address,
+                        value,
+                        attempt,
+                        _WRITE_RETRIES,
+                        err,
+                    )
+                    await asyncio.sleep(_RETRY_DELAY)
+        assert last_error is not None
+        raise last_error
+
+    async def async_write_registers(self, address: int, values: list[int]) -> None:
+        """Write holding registers and recover once from a broken connection."""
+        last_error: Exception | None = None
+        for attempt in range(1, _WRITE_RETRIES + 1):
+            try:
+                await self.unit.write_registers(address, values)
+                return
+            except Exception as err:  # noqa: BLE001
+                last_error = err
+                if not _is_connection_error(err):
+                    raise
+                try:
+                    await self.unit.disconnect()
+                except Exception as disconnect_err:  # noqa: BLE001
+                    _LOGGER.debug(
+                        "MODBUS DISCONNECT FAILED AFTER MULTI-REGISTER WRITE | error=%s",
+                        disconnect_err,
+                    )
+                if attempt < _WRITE_RETRIES:
+                    _LOGGER.warning(
+                        "MODBUS MULTI-REGISTER WRITE RETRY | address=%s | count=%s | "
+                        "attempt=%s/%s | error=%s",
+                        address,
+                        len(values),
+                        attempt,
+                        _WRITE_RETRIES,
+                        err,
+                    )
+                    await asyncio.sleep(_RETRY_DELAY)
+        assert last_error is not None
+        raise last_error
 
     async def _async_update_data(self) -> dict[str, object]:
         async with self.modbus_lock:

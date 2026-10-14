@@ -72,16 +72,25 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
     async def async_set_value(self, value: time) -> None:
         registers = [value.hour, value.minute]
         async with self.coordinator.modbus_lock:
-            await self.coordinator.unit.write_registers(self._address, registers)
-            await asyncio.sleep(_INTER_REQUEST_DELAY)
-            values = await self.coordinator.unit.read_holding_registers(
-                self._address, 2
-            )
-            if [int(item) for item in values] != registers:
-                raise RuntimeError(
-                    "TOU time write verification failed: "
-                    f"expected {registers}, got {values!r}"
+            previous = dict(self.coordinator.data)
+            optimistic = dict(previous)
+            optimistic[f"r{self._address}"] = registers[0]
+            optimistic[f"r{self._address + 1}"] = registers[1]
+            self.coordinator.async_set_updated_data(optimistic)
+            try:
+                await self.coordinator.async_write_registers(self._address, registers)
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
+                values = await self.coordinator.unit.read_holding_registers(
+                    self._address, 2
                 )
+                if [int(item) for item in values] != registers:
+                    raise RuntimeError(
+                        "TOU time write verification failed: "
+                        f"expected {registers}, got {values!r}"
+                    )
+            except Exception:
+                self.coordinator.async_set_updated_data(previous)
+                raise
 
         updated = dict(self.coordinator.data)
         updated[f"r{self._address}"] = int(values[0])

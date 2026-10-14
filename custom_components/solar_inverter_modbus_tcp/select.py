@@ -71,6 +71,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
         value = NAME_TO_VALUE[option]
         async with self.coordinator.modbus_lock:
             started = __import__("time").monotonic()
+            previous = dict(self.coordinator.data)
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE | FC03 | address=4300 | count=7 | range=4300-4306")
             settings = await self.coordinator.unit.read_holding_registers(4300, 7)
@@ -78,15 +79,23 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
                 raise RuntimeError(f"EMS settings read returned {len(settings)} registers, expected 7")
 
             settings[0] = value
+            optimistic = dict(previous)
+            optimistic["r4300"] = value
+            optimistic["ems_mode"] = value
+            self.coordinator.async_set_updated_data(optimistic)
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE | FC16 | address=4300 | count=7 | range=4300-4306 | values=%s", settings)
-            await self.coordinator.unit.write_registers(4300, settings)
+            try:
+                await self.coordinator.async_write_registers(4300, settings)
 
-            if self.coordinator.debug_logging:
-                _LOGGER.debug("MODBUS VERIFY | FC03 | address=4300 | count=1")
-            values = await self.coordinator.unit.read_holding_registers(4300, 1)
-            if not values or int(values[0]) != value:
-                raise RuntimeError(f"EMS mode write verification failed: expected {value}, got {values!r}")
+                if self.coordinator.debug_logging:
+                    _LOGGER.debug("MODBUS VERIFY | FC03 | address=4300 | count=1")
+                values = await self.coordinator.unit.read_holding_registers(4300, 1)
+                if not values or int(values[0]) != value:
+                    raise RuntimeError(f"EMS mode write verification failed: expected {value}, got {values!r}")
+            except Exception:
+                self.coordinator.async_set_updated_data(previous)
+                raise
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE SUCCESS | FC16 | range=4300-4306 | duration=%.3fs", __import__("time").monotonic() - started)
 
@@ -141,22 +150,30 @@ class EvChargerSettingSelect(
         value = self._option_to_value[option]
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
+            previous = dict(self.coordinator.data)
+            optimistic = dict(previous)
+            optimistic[f"r{self._address}"] = value
+            self.coordinator.async_set_updated_data(optimistic)
             if self.coordinator.debug_logging:
                 _LOGGER.debug(
                     "MODBUS WRITE | FC06 | address=%s | value=%s",
                     self._address,
                     value,
                 )
-            await self.coordinator.unit.write_register(self._address, value)
-            await asyncio.sleep(0.25)
-            values = await self.coordinator.unit.read_holding_registers(
-                self._address, 1
-            )
-            if not values or int(values[0]) != value:
-                raise RuntimeError(
-                    "EV charger setting write verification failed: "
-                    f"expected {value}, got {values!r}"
+            try:
+                await self.coordinator.async_write_register(self._address, value)
+                await asyncio.sleep(0.25)
+                values = await self.coordinator.unit.read_holding_registers(
+                    self._address, 1
                 )
+                if not values or int(values[0]) != value:
+                    raise RuntimeError(
+                        "EV charger setting write verification failed: "
+                        f"expected {value}, got {values!r}"
+                    )
+            except Exception:
+                self.coordinator.async_set_updated_data(previous)
+                raise
 
         updated = dict(self.coordinator.data)
         updated[f"r{self._address}"] = int(values[0])

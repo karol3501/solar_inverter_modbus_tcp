@@ -152,25 +152,23 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             else:
                 raw = (current_raw & 0xFF00) | requested
 
-            if self.coordinator.debug_logging:
-                _LOGGER.debug("MODBUS WRITE | FC06 | address=4446 | value=%s", raw)
-
-            try:
-                await self.coordinator.unit.write_register(4446, raw)
-                await asyncio.sleep(_INTER_REQUEST_DELAY)
-            except Exception as err:
-                _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
-                try:
-                    await self.coordinator.unit.disconnect()
-                except Exception as disconnect_err:  # noqa: BLE001
-                    _LOGGER.debug("MODBUS DISCONNECT FAILED AFTER PEAK SHAVING WRITE | error=%s", disconnect_err)
-                raise
-
-            updated = dict(self.coordinator.data)
+            previous = dict(self.coordinator.data)
+            updated = dict(previous)
             updated["r4446"] = raw
             updated["peak_meter_baseline_soc"] = raw // 256
             updated["peak_meter_reserved_soc"] = raw % 256
             self.coordinator.async_set_updated_data(updated)
+
+            if self.coordinator.debug_logging:
+                _LOGGER.debug("MODBUS WRITE | FC06 | address=4446 | value=%s", raw)
+
+            try:
+                await self.coordinator.async_write_register(4446, raw)
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
+            except Exception as err:
+                _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
+                self.coordinator.async_set_updated_data(previous)
+                raise
 
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE SUCCESS | FC06 | address=4446 | duration=%.3fs", time.monotonic() - started)
@@ -220,20 +218,28 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
 
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
+            previous = dict(self.coordinator.data)
+            optimistic = dict(previous)
+            optimistic["r259"] = raw_value
+            self.coordinator.async_set_updated_data(optimistic)
             if self.coordinator.debug_logging:
                 _LOGGER.debug(
                     "MODBUS WRITE | FC06 | address=259 | value=%s | watts=%s",
                     raw_value,
                     requested,
                 )
-            await self.coordinator.unit.write_register(259, raw_value)
-            await asyncio.sleep(_INTER_REQUEST_DELAY)
-            values = await self.coordinator.unit.read_holding_registers(259, 1)
-            if not values or int(values[0]) != raw_value:
-                raise RuntimeError(
-                    "Export limit write verification failed: "
-                    f"expected {raw_value}, got {values!r}"
-                )
+            try:
+                await self.coordinator.async_write_register(259, raw_value)
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
+                values = await self.coordinator.unit.read_holding_registers(259, 1)
+                if not values or int(values[0]) != raw_value:
+                    raise RuntimeError(
+                        "Export limit write verification failed: "
+                        f"expected {raw_value}, got {values!r}"
+                    )
+            except Exception:
+                self.coordinator.async_set_updated_data(previous)
+                raise
 
         updated = dict(self.coordinator.data)
         updated["r259"] = int(values[0])
@@ -296,6 +302,10 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
 
         async with self.coordinator.modbus_lock:
             started = time.monotonic()
+            previous = dict(self.coordinator.data)
+            optimistic = dict(previous)
+            optimistic[f"r{self._address}"] = raw_value
+            self.coordinator.async_set_updated_data(optimistic)
             if self.coordinator.debug_logging:
                 _LOGGER.debug(
                     "MODBUS WRITE | FC06 | address=%s | value=%s",
@@ -303,7 +313,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
                     raw_value,
                 )
             try:
-                await self.coordinator.unit.write_register(self._address, raw_value)
+                await self.coordinator.async_write_register(self._address, raw_value)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
                 values = await self.coordinator.unit.read_holding_registers(
                     self._address, 1
@@ -329,6 +339,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
                         "MODBUS DISCONNECT FAILED AFTER BATTERY SETTING WRITE | error=%s",
                         disconnect_err,
                     )
+                self.coordinator.async_set_updated_data(previous)
                 raise
 
         updated = dict(self.coordinator.data)
@@ -378,11 +389,19 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
         )
         raw = round(requested / self._scale)
         async with self.coordinator.modbus_lock:
-            await self.coordinator.unit.write_register(self._address, raw)
-            await asyncio.sleep(_INTER_REQUEST_DELAY)
-            values = await self.coordinator.unit.read_holding_registers(self._address, 1)
-            if not values or int(values[0]) != raw:
-                raise RuntimeError(f"EMS setting write verification failed: expected {raw}, got {values!r}")
+            previous = dict(self.coordinator.data)
+            optimistic = dict(previous)
+            optimistic[f"r{self._address}"] = raw
+            self.coordinator.async_set_updated_data(optimistic)
+            try:
+                await self.coordinator.async_write_register(self._address, raw)
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
+                values = await self.coordinator.unit.read_holding_registers(self._address, 1)
+                if not values or int(values[0]) != raw:
+                    raise RuntimeError(f"EMS setting write verification failed: expected {raw}, got {values!r}")
+            except Exception:
+                self.coordinator.async_set_updated_data(previous)
+                raise
         updated = dict(self.coordinator.data)
         updated[f"r{self._address}"] = int(values[0])
         self.coordinator.async_set_updated_data(updated)
