@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -86,7 +86,24 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self._last_data: dict[str, object] = {}
         self._successful_requests = 0
         self._failed_requests = 0
+        self.last_successful_read: datetime | None = None
+        self.response_time_ms: float | None = None
+        self.timeout_count = 0
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
+
+    async def async_modbus_request(self, method: str, *args):
+        """Measure actual requests, counting each timeout including retries."""
+        started = time.monotonic()
+        try:
+            result = await getattr(self.unit, method)(*args)
+        except Exception as err:
+            if isinstance(err, TimeoutError) or "timeout" in str(err).lower():
+                self.timeout_count += 1
+            raise
+        self.response_time_ms = round((time.monotonic() - started) * 1000, 1)
+        if method.startswith("read_") and len(result) == args[1]:
+            self.last_successful_read = datetime.now(timezone.utc)
+        return result
 
     def _debug(self, message: str, *args: object) -> None:
         if self.debug_logging:
@@ -95,12 +112,12 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     async def _read(self, function: str, address: int, count: int) -> list[int]:
         last_error: Exception | None = None
         end = address + count - 1
-        reader = self.unit.read_input_registers if function == "FC04" else self.unit.read_holding_registers
+        method = "read_input_registers" if function == "FC04" else "read_holding_registers"
         for attempt in range(1, _READ_RETRIES + 1):
             started = time.monotonic()
             self._debug("MODBUS READ | %s | address=%s | count=%s | range=%s-%s | attempt=%s/%s", function, address, count, address, end, attempt, _READ_RETRIES)
             try:
-                values = await reader(address, count)
+                values = await self.async_modbus_request(method, address, count)
                 if len(values) != count:
                     raise UpdateFailed(f"{function} read {address}-{end} returned {len(values)} registers, expected {count}")
                 result = [int(value) for value in values]
@@ -141,7 +158,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             return
         await asyncio.sleep(_INTER_REQUEST_DELAY)
         try:
-            await self.unit.write_register(address, value)
+            await self.async_modbus_request("write_register", address, value)
             return
         except Exception as err:  # noqa: BLE001
             if not _is_connection_error(err):
@@ -174,7 +191,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         for attempt in range(1, _WRITE_RETRIES + 1):
             try:
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-                await self.unit.write_registers(address, values)
+                await self.async_modbus_request("write_registers", address, values)
                 return
             except Exception as err:  # noqa: BLE001
                 last_error = err

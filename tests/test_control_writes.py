@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import time as datetime_time
+from datetime import datetime, timezone
 import logging
 from types import SimpleNamespace
 import unittest
@@ -18,6 +19,9 @@ class FakeCoordinatorBase:
     def async_set_updated_data(self, data):
         self.data = data
 
+    def async_update_listeners(self):
+        pass
+
 
 def make_coordinator():
     namespace = load_definitions('coordinator.py', {
@@ -26,7 +30,9 @@ def make_coordinator():
         'DataUpdateCoordinator': FakeCoordinatorBase,
         '_LOGGER': logging.getLogger(__name__),
         '_WRITE_RETRIES': 2, '_RETRY_DELAY': 0, '_INTER_REQUEST_DELAY': 0,
+        '_READ_RETRIES': 2, 'UpdateFailed': RuntimeError,
         'asyncio': asyncio,
+        'time': __import__('time'), 'datetime': datetime, 'timezone': timezone,
     })
     coordinator_type = namespace['SolarInverterCoordinator']
     coordinator = coordinator_type.__new__(coordinator_type)
@@ -34,6 +40,9 @@ def make_coordinator():
         write_register=AsyncMock(), write_registers=AsyncMock(), disconnect=AsyncMock(),
     )
     coordinator._read_holding = AsyncMock(return_value=[0])
+    coordinator.timeout_count = 0
+    coordinator.response_time_ms = None
+    coordinator.last_successful_read = None
     return coordinator
 
 
@@ -110,7 +119,8 @@ class FakeEntity:
 
 
 def control_types():
-    decorator = load_definitions('control.py', {'optimistic_control'}, {'wraps': wraps})['optimistic_control']
+    control_namespace = load_definitions('control.py', {'optimistic_control', 'control_state_attributes'}, {'wraps': wraps, 'asyncio': asyncio})
+    decorator = control_namespace['optimistic_control']
     namespace = {
         'SolarInverterCoordinator': object,
         'CoordinatorEntity': FakeEntity, 'NumberEntity': type('NumberEntity', (), {}),
@@ -123,6 +133,7 @@ def control_types():
         'inverter_device_info': lambda coordinator: {}, 'ev_charger_device_info': lambda coordinator: {},
         '_LOGGER': logging.getLogger(__name__), '_INTER_REQUEST_DELAY': 0,
         'asyncio': asyncio, 'time': __import__('time'), 'optimistic_control': decorator,
+        'control_state_attributes': control_namespace['control_state_attributes'],
     }
     load_definitions('number.py', {'PeakShavingNumber', 'ExportPowerLimitNumber', 'BatterySettingNumber', 'EmsSettingNumber', 'EvChargerPowerNumber'}, namespace)
     load_definitions('select.py', {'SolarInverterEmsSelect', 'EvChargerSettingSelect'}, namespace)
@@ -176,13 +187,17 @@ class ImmediateFeedbackTests(unittest.IsolatedAsyncioTestCase):
         for entity, value in controls:
             with self.subTest(entity=type(entity).__name__):
                 await coordinator.modbus_lock.acquire()
+                self.assertEqual(entity.extra_state_attributes['write_status'], 'idle')
                 task = asyncio.create_task(self.setter(entity)(value))
                 await asyncio.sleep(0)
                 self.assertEqual(entity.states[-1], value)
+                self.assertEqual(entity.extra_state_attributes['write_status'], 'pending')
                 self.assertFalse(task.done())
                 coordinator.modbus_lock.release()
                 await task
                 self.assertEqual(entity.states[-1], value)
+                self.assertEqual(entity.extra_state_attributes['write_status'], 'confirmed')
+                self.assertIsNone(entity.extra_state_attributes['write_error'])
                 self.assertEqual(coordinator._last_data, coordinator.data)
 
     async def test_all_controls_restore_state_on_failure(self):
@@ -198,6 +213,8 @@ class ImmediateFeedbackTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(entity.states[0], value)
                 self.assertEqual(entity.states[-1], old_value)
                 self.assertEqual(coordinator.data, previous)
+                self.assertEqual(entity.extra_state_attributes['write_status'], 'error')
+                self.assertEqual(entity.extra_state_attributes['write_error'], 'write rejected')
 
     async def test_cancelled_queued_control_clears_preview(self):
         coordinator, controls = self.make_controls()
@@ -210,6 +227,23 @@ class ImmediateFeedbackTests(unittest.IsolatedAsyncioTestCase):
             await task
         coordinator.modbus_lock.release()
         self.assertEqual(entity.native_value, 40)
+        self.assertEqual(entity.extra_state_attributes['write_status'], 'cancelled')
+
+    async def test_new_request_clears_previous_error(self):
+        coordinator, controls = self.make_controls()
+        entity, value = controls[0]
+        coordinator.async_write_register = AsyncMock(side_effect=RuntimeError('write rejected'))
+        with self.assertRaises(RuntimeError):
+            await self.setter(entity)(value)
+        coordinator.async_write_register = AsyncMock()
+        await coordinator.modbus_lock.acquire()
+        task = asyncio.create_task(self.setter(entity)(value))
+        await asyncio.sleep(0)
+        self.assertEqual(entity.extra_state_attributes['write_status'], 'pending')
+        self.assertIsNone(entity.extra_state_attributes['write_error'])
+        coordinator.modbus_lock.release()
+        await task
+        self.assertEqual(entity.extra_state_attributes['write_status'], 'confirmed')
 
     async def test_newest_queued_value_survives_older_completion(self):
         coordinator, controls = self.make_controls()
@@ -222,8 +256,10 @@ class ImmediateFeedbackTests(unittest.IsolatedAsyncioTestCase):
         coordinator.modbus_lock.release()
         await first
         self.assertEqual(entity.native_value, 60)
+        self.assertEqual(entity.extra_state_attributes['write_status'], 'pending')
         await second
         self.assertEqual(entity.native_value, 60)
+        self.assertEqual(entity.extra_state_attributes['write_status'], 'confirmed')
 
 
 if __name__ == '__main__':

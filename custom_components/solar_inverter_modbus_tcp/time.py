@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .control import optimistic_control
+from .control import control_state_attributes, optimistic_control
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
 from .device import inverter_device_info
@@ -69,6 +69,7 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
     @property
     def extra_state_attributes(self):
         return {
+            **control_state_attributes(self),
             "modbus_address_hour": str(self._address),
             "modbus_address_minute": str(self._address + 1),
         }
@@ -85,8 +86,8 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
             try:
                 await self.coordinator.async_write_registers(self._address, registers)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-                values = await self.coordinator.unit.read_holding_registers(
-                    self._address, 2
+                values = await self.coordinator.async_modbus_request(
+                    "read_holding_registers", self._address, 2
                 )
                 if [int(item) for item in values] != registers:
                     raise RuntimeError(

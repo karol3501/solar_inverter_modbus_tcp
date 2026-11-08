@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from homeassistant.components import sensor
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import StateType
@@ -76,7 +76,40 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
     entities.append(SolarInverterEmsModeSensor(coordinator))
+    entities.extend(
+        SolarConnectionDiagnosticSensor(coordinator, key, name, device_class, unit, state_class)
+        for key, name, device_class, unit, state_class in (
+            ("last_successful_read", "Last Successful Modbus Read", sensor.SensorDeviceClass.TIMESTAMP, None, None),
+            ("response_time_ms", "Modbus Response Time", sensor.SensorDeviceClass.DURATION, "ms", sensor.SensorStateClass.MEASUREMENT),
+            ("timeout_count", "Modbus Timeout Count", None, None, sensor.SensorStateClass.TOTAL_INCREASING),
+        )
+    )
     async_add_entities(entities)
+
+
+class SolarConnectionDiagnosticSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
+    """Expose connection diagnostics even when inverter polling fails."""
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, key, name, device_class, unit, state_class) -> None:
+        super().__init__(coordinator)
+        self._key = key
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_connection_{key}"
+        self._attr_name = name
+        self._attr_device_class = device_class
+        self._attr_native_unit_of_measurement = unit
+        self._attr_state_class = state_class
+        self._attr_device_info = inverter_device_info(coordinator)
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self):
+        return getattr(self.coordinator, self._key)
 
 
 class SolarInverterSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):

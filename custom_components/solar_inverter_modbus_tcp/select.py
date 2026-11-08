@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .control import optimistic_control
+from .control import control_state_attributes, optimistic_control
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
 from .device import ev_charger_device_info, inverter_device_info
@@ -59,7 +59,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
     @property
     def extra_state_attributes(self):
-        return {"modbus_address": "4300"}
+        return {**control_state_attributes(self), "modbus_address": "4300"}
 
     @property
     def current_option(self) -> str | None:
@@ -79,7 +79,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
             previous = dict(self.coordinator.data)
             if self.coordinator.debug_logging:
                 _LOGGER.debug("MODBUS WRITE | FC03 | address=4300 | count=7 | range=4300-4306")
-            settings = await self.coordinator.unit.read_holding_registers(4300, 7)
+            settings = await self.coordinator.async_modbus_request("read_holding_registers", 4300, 7)
             if len(settings) != 7:
                 raise RuntimeError(f"EMS settings read returned {len(settings)} registers, expected 7")
 
@@ -95,7 +95,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
                 if self.coordinator.debug_logging:
                     _LOGGER.debug("MODBUS VERIFY | FC03 | address=4300 | count=1")
-                values = await self.coordinator.unit.read_holding_registers(4300, 1)
+                values = await self.coordinator.async_modbus_request("read_holding_registers", 4300, 1)
                 if not values or int(values[0]) != value:
                     raise RuntimeError(f"EMS mode write verification failed: expected {value}, got {values!r}")
             except (Exception, asyncio.CancelledError):
@@ -142,6 +142,7 @@ class EvChargerSettingSelect(
     def extra_state_attributes(self):
         value = self.coordinator.data.get(f"r{self._address}")
         return {
+            **control_state_attributes(self),
             "modbus_address": str(self._address),
             "raw_value": int(value) if value is not None else None,
         }
@@ -172,8 +173,8 @@ class EvChargerSettingSelect(
             try:
                 await self.coordinator.async_write_register(self._address, value)
                 await asyncio.sleep(0.25)
-                values = await self.coordinator.unit.read_holding_registers(
-                    self._address, 1
+                values = await self.coordinator.async_modbus_request(
+                    "read_holding_registers", self._address, 1
                 )
                 if not values or int(values[0]) != value:
                     raise RuntimeError(

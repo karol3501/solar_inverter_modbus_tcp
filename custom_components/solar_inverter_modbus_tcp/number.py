@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .control import optimistic_control
+from .control import control_state_attributes, optimistic_control
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
 from .device import ev_charger_device_info, inverter_device_info
@@ -125,6 +125,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
     @property
     def extra_state_attributes(self):
         return {
+            **control_state_attributes(self),
             "modbus_address": "4446",
             "modbus_role": "high byte" if self._high_byte else "low byte",
         }
@@ -146,7 +147,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             started = time.monotonic()
             current_value = self.coordinator.data.get("r4446")
             if current_value is None:
-                current = await self.coordinator.unit.read_holding_registers(4446, 1)
+                current = await self.coordinator.async_modbus_request("read_holding_registers", 4446, 1)
                 if not current:
                     raise RuntimeError("FC03 register 4446 returned no data")
                 current_value = int(current[0])
@@ -211,6 +212,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
     def extra_state_attributes(self):
         raw_value = self.coordinator.data.get("r259")
         return {
+            **control_state_attributes(self),
             "modbus_address": "259",
             "raw_value": int(raw_value) if raw_value is not None else None,
             "percent": int(raw_value) / 10 if raw_value is not None else None,
@@ -240,7 +242,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
             try:
                 await self.coordinator.async_write_register(259, raw_value)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-                values = await self.coordinator.unit.read_holding_registers(259, 1)
+                values = await self.coordinator.async_modbus_request("read_holding_registers", 259, 1)
                 if not values or int(values[0]) != raw_value:
                     raise RuntimeError(
                         "Export limit write verification failed: "
@@ -301,6 +303,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
     def extra_state_attributes(self):
         raw_value = self.coordinator.data.get(f"r{self._address}")
         return {
+            **control_state_attributes(self),
             "modbus_address": str(self._address),
             "raw_value": int(raw_value) if raw_value is not None else None,
         }
@@ -328,8 +331,8 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
             try:
                 await self.coordinator.async_write_register(self._address, raw_value)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-                values = await self.coordinator.unit.read_holding_registers(
-                    self._address, 1
+                values = await self.coordinator.async_modbus_request(
+                    "read_holding_registers", self._address, 1
                 )
                 if not values or int(values[0]) != raw_value:
                     raise RuntimeError(
@@ -396,7 +399,7 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
     @property
     def extra_state_attributes(self):
         raw = self.coordinator.data.get(f"r{self._address}")
-        return {"modbus_address": str(self._address), "raw_value": int(raw) if raw is not None else None}
+        return {**control_state_attributes(self), "modbus_address": str(self._address), "raw_value": int(raw) if raw is not None else None}
 
     @optimistic_control
     async def async_set_native_value(self, value: float) -> None:
@@ -413,7 +416,7 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
             try:
                 await self.coordinator.async_write_register(self._address, raw)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-                values = await self.coordinator.unit.read_holding_registers(self._address, 1)
+                values = await self.coordinator.async_modbus_request("read_holding_registers", self._address, 1)
                 if not values or int(values[0]) != raw:
                     raise RuntimeError(f"EMS setting write verification failed: expected {raw}, got {values!r}")
             except (Exception, asyncio.CancelledError):
