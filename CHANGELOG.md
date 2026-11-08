@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.1.dev2
+
+### Development prerelease
+- Add write_status and write_error attributes to Number, Select and TOU Time controls. Status tracks idle, pending, confirmed, error and cancelled operations.
+- Add diagnostic sensors for the last successful Modbus read, latest successful response time in milliseconds and timeout count.
+- Count each timed-out request, including retries. The counter resets when the integration reloads.
+- Keep diagnostic sensors available during communication failures.
+
+### Validation
+- All 37 isolated regression tests pass.
+- Testing with a real inverter and a running Home Assistant instance is still required.
+
 ## 1.2.1.dev1
 
 ### Development prerelease
