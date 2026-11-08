@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.1.dev1
+
+### Development prerelease
+- Show requested Number, Select and TOU Time values immediately, including while polling holds the Modbus connection. Restore the previous value when an operation fails.
+- Verify register values after a write timeout to recover lost acknowledgements. Fall back to FC16 when a single-register write cannot be confirmed.
+- Keep cached control values consistent with successful writes and rollbacks.
+- Fix older configurations with no saved EV charger list and read all six EV identification registers during fallback detection.
+- Read register 2069 to complete the Grid To Load Energy Total counter.
+- Restrict sensor entity ID migration to recognized legacy defaults, preserving custom IDs.
+
+### Validation
+- All 25 isolated regression tests pass, including queued controls, rollback, timeout recovery and previous fixes.
+- Testing with a real inverter and a running Home Assistant instance is still required.
+
 ## 1.2.0
 
 ### Testing release
