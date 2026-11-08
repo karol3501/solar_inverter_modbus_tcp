@@ -129,43 +129,51 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
     async def _read_holding(self, address: int, count: int) -> list[int]:
         return await self._read("FC03", address, count)
 
+    def async_set_updated_data(self, data: dict[str, object]) -> None:
+        """Keep the fallback cache consistent with control updates and rollbacks."""
+        self._last_data = data.copy()
+        super().async_set_updated_data(data)
+
     async def async_write_register(self, address: int, value: int) -> None:
-        """Write one holding register and recover once from a broken connection."""
-        last_error: Exception | None = None
-        for attempt in range(1, _WRITE_RETRIES + 1):
+        """Recover an unacknowledged single-register write before retrying FC16."""
+        if getattr(self, "_single_write_uses_fc16", False):
+            await self.async_write_registers(address, [value])
+            return
+        await asyncio.sleep(_INTER_REQUEST_DELAY)
+        try:
+            await self.unit.write_register(address, value)
+            return
+        except Exception as err:  # noqa: BLE001
+            if not _is_connection_error(err):
+                raise
+            _LOGGER.warning(
+                "MODBUS SINGLE WRITE RECOVERY | address=%s | value=%s | error=%s",
+                address, value, err,
+            )
             try:
-                await self.unit.write_register(address, value)
+                await self.unit.disconnect()
+            except Exception as disconnect_err:  # noqa: BLE001
+                _LOGGER.debug("MODBUS DISCONNECT FAILED AFTER WRITE | error=%s", disconnect_err)
+
+        # A lost acknowledgement can still mean the inverter applied the value.
+        try:
+            values = await self._read_holding(address, 1)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.debug("MODBUS WRITE RECOVERY READ FAILED | address=%s | error=%s", address, err)
+        else:
+            if values == [value]:
                 return
-            except Exception as err:  # noqa: BLE001
-                last_error = err
-                if not _is_connection_error(err):
-                    raise
-                try:
-                    await self.unit.disconnect()
-                except Exception as disconnect_err:  # noqa: BLE001
-                    _LOGGER.debug(
-                        "MODBUS DISCONNECT FAILED AFTER WRITE | error=%s",
-                        disconnect_err,
-                    )
-                if attempt < _WRITE_RETRIES:
-                    _LOGGER.warning(
-                        "MODBUS WRITE RETRY | address=%s | value=%s | "
-                        "attempt=%s/%s | error=%s",
-                        address,
-                        value,
-                        attempt,
-                        _WRITE_RETRIES,
-                        err,
-                    )
-                    await asyncio.sleep(_RETRY_DELAY)
-        assert last_error is not None
-        raise last_error
+
+        _LOGGER.warning("MODBUS WRITE FALLBACK | FC16 | address=%s | value=%s", address, value)
+        await self.async_write_registers(address, [value])
+        self._single_write_uses_fc16 = True
 
     async def async_write_registers(self, address: int, values: list[int]) -> None:
         """Write holding registers and recover once from a broken connection."""
         last_error: Exception | None = None
         for attempt in range(1, _WRITE_RETRIES + 1):
             try:
+                await asyncio.sleep(_INTER_REQUEST_DELAY)
                 await self.unit.write_registers(address, values)
                 return
             except Exception as err:  # noqa: BLE001
@@ -179,6 +187,14 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
                         "MODBUS DISCONNECT FAILED AFTER MULTI-REGISTER WRITE | error=%s",
                         disconnect_err,
                     )
+                # Verify before repeating a write whose acknowledgement was lost.
+                try:
+                    actual = await self._read_holding(address, len(values))
+                except Exception as read_err:  # noqa: BLE001
+                    _LOGGER.debug("MODBUS WRITE RECOVERY READ FAILED | address=%s | error=%s", address, read_err)
+                else:
+                    if actual == values:
+                        return
                 if attempt < _WRITE_RETRIES:
                     _LOGGER.warning(
                         "MODBUS MULTI-REGISTER WRITE RETRY | address=%s | count=%s | "
@@ -209,7 +225,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         input_blocks = [
             (0, 39), (45, 7), (62, 15), (81, 3), (91, 4), (113, 3),
             (201, 1), (1022, 4), (1046, 4), (1060, 1), (1078, 6),
-            (2000, 69), (2100, 36),
+            (2000, 70), (2100, 36),
         ]
         if self.enable_generator:
             input_blocks.append((103, 9))
@@ -218,7 +234,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
             if self.ev_chargers is None:
                 for charger, address in ((1, 3200),):
                     try:
-                        values = await self._read_input(address, 1)
+                        values = await self._read_input(address, 6)
                         _put_block(self._last_data, values, address)
                     except Exception as err:  # noqa: BLE001
                         _LOGGER.warning("EV CHARGER DETECTION FAILED | charger=%s | address=%s | error=%s", charger, address, err)

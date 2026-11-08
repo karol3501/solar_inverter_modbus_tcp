@@ -11,6 +11,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .control import optimistic_control
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
 from .device import ev_charger_device_info, inverter_device_info
@@ -73,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
         ("tou_period_1_stop_discharge_soc", "TOU Period 1 Stop Discharge SOC", 4460, 10, 100, 1.0, "%", NumberMode.SLIDER),
     ]
     entities.extend(EmsSettingNumber(coordinator, *setting) for setting in ems_settings)
-    if 1 in coordinator.ev_chargers or ():
+    if 1 in (coordinator.ev_chargers or ()):
         address = 4700
         rated_power_kw = coordinator.ev_charger_rated_power_kw
         entities.extend(
@@ -130,9 +131,13 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
 
     @property
     def native_value(self) -> float | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         value = self.coordinator.data.get(self._data_key)
         return float(value) if value is not None else None
 
+    @optimistic_control
     async def async_set_native_value(self, value: float) -> None:
         requested = max(10, min(100, int(value)))
 
@@ -165,7 +170,7 @@ class PeakShavingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntit
             try:
                 await self.coordinator.async_write_register(4446, raw)
                 await asyncio.sleep(_INTER_REQUEST_DELAY)
-            except Exception as err:
+            except (Exception, asyncio.CancelledError) as err:
                 _LOGGER.error("PEAK SHAVING WRITE FAILED | FC06 | address=4446 | value=%s | duration=%.3fs | error=%s", raw, time.monotonic() - started, err)
                 self.coordinator.async_set_updated_data(previous)
                 raise
@@ -194,6 +199,9 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
 
     @property
     def native_value(self) -> float | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         raw_value = self.coordinator.data.get("r259")
         if raw_value is None:
             return None
@@ -210,6 +218,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
             "configured_export_limit_watts": self.coordinator.export_limit_watts,
         }
 
+    @optimistic_control
     async def async_set_native_value(self, value: float) -> None:
         requested = max(0, min(self.coordinator.export_limit_watts, round(value)))
         raw_value = round(
@@ -237,7 +246,7 @@ class ExportPowerLimitNumber(CoordinatorEntity[SolarInverterCoordinator], Number
                         "Export limit write verification failed: "
                         f"expected {raw_value}, got {values!r}"
                     )
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 self.coordinator.async_set_updated_data(previous)
                 raise
 
@@ -282,6 +291,9 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
 
     @property
     def native_value(self) -> float | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         value = self.coordinator.data.get(f"r{self._address}")
         return float(value) * self._scale if value is not None else None
 
@@ -293,6 +305,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
             "raw_value": int(raw_value) if raw_value is not None else None,
         }
 
+    @optimistic_control
     async def async_set_native_value(self, value: float) -> None:
         requested = max(
             self._attr_native_min_value,
@@ -323,7 +336,7 @@ class BatterySettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEn
                         "Battery setting write verification failed: "
                         f"expected {raw_value}, got {values!r}"
                     )
-            except Exception as err:
+            except (Exception, asyncio.CancelledError) as err:
                 _LOGGER.error(
                     "BATTERY SETTING WRITE FAILED | FC06 | address=%s | value=%s | "
                     "duration=%.3fs | error=%s",
@@ -374,6 +387,9 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
 
     @property
     def native_value(self):
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         value = self.coordinator.data.get(f"r{self._address}")
         return float(value) * self._scale if value is not None else None
 
@@ -382,6 +398,7 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
         raw = self.coordinator.data.get(f"r{self._address}")
         return {"modbus_address": str(self._address), "raw_value": int(raw) if raw is not None else None}
 
+    @optimistic_control
     async def async_set_native_value(self, value: float) -> None:
         requested = max(
             self._attr_native_min_value,
@@ -399,7 +416,7 @@ class EmsSettingNumber(CoordinatorEntity[SolarInverterCoordinator], NumberEntity
                 values = await self.coordinator.unit.read_holding_registers(self._address, 1)
                 if not values or int(values[0]) != raw:
                     raise RuntimeError(f"EMS setting write verification failed: expected {raw}, got {values!r}")
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 self.coordinator.async_set_updated_data(previous)
                 raise
         updated = dict(self.coordinator.data)

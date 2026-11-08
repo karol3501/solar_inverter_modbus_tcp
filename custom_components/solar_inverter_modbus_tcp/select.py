@@ -10,6 +10,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .control import optimistic_control
 from .const import DOMAIN, EMS_MODES
 from .coordinator import SolarInverterCoordinator
 from .device import ev_charger_device_info, inverter_device_info
@@ -22,7 +23,7 @@ NAME_TO_VALUE = {name: value for value, name in EMS_MODES.items()}
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddEntitiesCallback) -> None:
     coordinator: SolarInverterCoordinator = entry.runtime_data
     entities = [SolarInverterEmsSelect(coordinator)]
-    if 1 in coordinator.ev_chargers or ():
+    if 1 in (coordinator.ev_chargers or ()):
         address = 4700
         entities.extend(
             (
@@ -62,11 +63,15 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
 
     @property
     def current_option(self) -> str | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         value = self.coordinator.data.get("ems_mode")
         if value is None:
             return None
         return EMS_MODES.get(int(value))
 
+    @optimistic_control
     async def async_select_option(self, option: str) -> None:
         value = NAME_TO_VALUE[option]
         async with self.coordinator.modbus_lock:
@@ -93,7 +98,7 @@ class SolarInverterEmsSelect(CoordinatorEntity[SolarInverterCoordinator], Select
                 values = await self.coordinator.unit.read_holding_registers(4300, 1)
                 if not values or int(values[0]) != value:
                     raise RuntimeError(f"EMS mode write verification failed: expected {value}, got {values!r}")
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 self.coordinator.async_set_updated_data(previous)
                 raise
             if self.coordinator.debug_logging:
@@ -143,9 +148,13 @@ class EvChargerSettingSelect(
 
     @property
     def current_option(self) -> str | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         value = self.coordinator.data.get(f"r{self._address}")
         return self._value_to_option.get(int(value)) if value is not None else None
 
+    @optimistic_control
     async def async_select_option(self, option: str) -> None:
         value = self._option_to_value[option]
         async with self.coordinator.modbus_lock:
@@ -171,7 +180,7 @@ class EvChargerSettingSelect(
                         "EV charger setting write verification failed: "
                         f"expected {value}, got {values!r}"
                     )
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 self.coordinator.async_set_updated_data(previous)
                 raise
 

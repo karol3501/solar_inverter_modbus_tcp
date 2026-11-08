@@ -80,6 +80,7 @@ def _async_migrate_sensor_entity_ids(
     migrations = [
         (
             f"{DOMAIN}_{coordinator.entry_id}_total_grid_power",
+            "sensor.solar_inverter_total_grid_power",
             "sensor.solar_inverter_grid_active_power",
         )
     ]
@@ -89,13 +90,14 @@ def _async_migrate_sensor_entity_ids(
             migrations.append(
                 (
                     f"{DOMAIN}_{coordinator.entry_id}_{description.key}",
+                    f"sensor.solar_inverter_ev_charger_{suffix}",
                     f"sensor.ev_charger_{suffix}",
                 )
             )
 
-    for unique_id, new_entity_id in migrations:
+    for unique_id, old_entity_id, new_entity_id in migrations:
         entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
-        if entity_id is None or entity_id == new_entity_id:
+        if entity_id != old_entity_id:
             continue
         if registry.async_get(new_entity_id) is not None:
             _LOGGER.warning(

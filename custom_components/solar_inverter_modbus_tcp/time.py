@@ -11,6 +11,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .control import optimistic_control
 from .const import DOMAIN
 from .coordinator import SolarInverterCoordinator
 from .device import inverter_device_info
@@ -56,6 +57,9 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
 
     @property
     def native_value(self) -> time | None:
+        pending = getattr(self, "_pending_control_value", None)
+        if pending is not None:
+            return pending[1]
         hour = self.coordinator.data.get(f"r{self._address}")
         minute = self.coordinator.data.get(f"r{self._address + 1}")
         if hour is None or minute is None:
@@ -69,6 +73,7 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
             "modbus_address_minute": str(self._address + 1),
         }
 
+    @optimistic_control
     async def async_set_value(self, value: time) -> None:
         registers = [value.hour, value.minute]
         async with self.coordinator.modbus_lock:
@@ -88,7 +93,7 @@ class TouPeriodTime(CoordinatorEntity[SolarInverterCoordinator], TimeEntity):
                         "TOU time write verification failed: "
                         f"expected {registers}, got {values!r}"
                     )
-            except Exception:
+            except (Exception, asyncio.CancelledError):
                 self.coordinator.async_set_updated_data(previous)
                 raise
 
