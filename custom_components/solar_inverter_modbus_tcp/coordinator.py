@@ -89,6 +89,7 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self.last_successful_read: datetime | None = None
         self.response_time_ms: float | None = None
         self.timeout_count = 0
+        self.backup_power_fresh = False
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=update_interval))
 
     async def async_modbus_request(self, method: str, *args):
@@ -286,11 +287,14 @@ class SolarInverterCoordinator(DataUpdateCoordinator[dict[str, object]]):
         self._failed_requests = 0
 
         connection_failed = False
+        self.backup_power_fresh = False
         for function, blocks in (("FC04", input_blocks), ("FC03", holding_blocks)):
             for address, count in blocks:
                 try:
                     values = await (self._read_input(address, count) if function == "FC04" else self._read_holding(address, count))
                     _put_block(data, values, address)
+                    if function == "FC04" and address == 91:
+                        self.backup_power_fresh = True
                     self._successful_requests += 1
                 except Exception as err:  # noqa: BLE001
                     self._failed_requests += 1
