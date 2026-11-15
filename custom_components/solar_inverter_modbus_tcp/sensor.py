@@ -75,6 +75,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities: AddE
             )
     entities.extend(SolarDerivedSensor(coordinator, *item) for item in DERIVED)
     entities.append(SolarLoadEnergyTodaySensor(coordinator))
+    entities.extend(SolarBackupEnergySensor(coordinator, period) for period in ("today", "total"))
     entities.append(SolarInverterEmsModeSensor(coordinator))
     entities.extend(
         SolarConnectionDiagnosticSensor(coordinator, key, name, device_class, unit, state_class)
@@ -235,6 +236,78 @@ class SolarLoadEnergyTodaySensor(CoordinatorEntity[SolarInverterCoordinator], se
             "baseline_total": self._baseline,
             "reset_date": self._reset_date,
         }
+
+
+
+class SolarBackupEnergySensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity, RestoreEntity):
+    """Calculate EPS energy from fresh backup power samples."""
+
+    _attr_has_entity_name = True
+    _attr_native_unit_of_measurement = "kWh"
+    _attr_device_class = sensor.SensorDeviceClass.ENERGY
+    _attr_state_class = sensor.SensorStateClass.TOTAL_INCREASING
+
+    def __init__(self, coordinator: SolarInverterCoordinator, period: str) -> None:
+        super().__init__(coordinator)
+        self._period = period
+        self._attr_name = f"Backup Energy {period.title()}"
+        self._attr_unique_id = f"{DOMAIN}_{coordinator.entry_id}_backup_energy_{period}"
+        self._attr_device_info = inverter_device_info(coordinator)
+        self._energy = 0.0
+        self._last_sample = None
+        self._last_power = None
+        self._reset_date = dt_util.now().date().isoformat()
+        self._restored = False
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state is not None:
+            try:
+                self._energy = max(0.0, float(state.state))
+            except (TypeError, ValueError):
+                self._energy = 0.0
+            if self._period == "today" and state.attributes.get("reset_date") != self._reset_date:
+                self._energy = 0.0
+        self._restored = True
+        self.async_write_ha_state()
+
+    def _handle_coordinator_update(self) -> None:
+        if self._restored:
+            now = dt_util.utcnow()
+            today = dt_util.as_local(now).date().isoformat()
+            if self._period == "today" and today != self._reset_date:
+                self._energy = 0.0
+                self._reset_date = today
+                self._last_sample = None
+                self._last_power = None
+            if self.coordinator.backup_power_fresh:
+                raw = self.coordinator.data.get("backup_active_power")
+                if raw is not None:
+                    power = max(0.0, float(raw))
+                    if self._last_sample is not None:
+                        seconds = (now - self._last_sample).total_seconds()
+                        max_gap = max(300.0, 3 * self.coordinator.update_interval.total_seconds())
+                        if 0 < seconds <= max_gap:
+                            self._energy += (self._last_power + power) * seconds / 7200000.0
+                    self._last_sample = now
+                    self._last_power = power
+                else:
+                    self._last_sample = None
+                    self._last_power = None
+            else:
+                self._last_sample = None
+                self._last_power = None
+        super()._handle_coordinator_update()
+
+    @property
+    def native_value(self) -> StateType:
+        return round(self._energy, 4) if self._restored else None
+
+    @property
+    def extra_state_attributes(self):
+        return {"calculated": True, "source_sensors": ["Backup Active Power"],
+                "reset_date": self._reset_date if self._period == "today" else None}
 
 
 class SolarInverterEmsModeSensor(CoordinatorEntity[SolarInverterCoordinator], sensor.SensorEntity):
